@@ -200,12 +200,16 @@ func (client *SlackClient) loadCache() error {
 	return json.Unmarshal(content, &client.cache)
 }
 
-func (client *SlackClient) history(channelID string, startTime time.Time, endTime time.Time) (*HistoryResponse, error) {
+func (client *SlackClient) history(channelID string, startTimestamp string, limit int) (*HistoryResponse, error) {
+	// TODO: to support threads, first just get the start message.
+	// If a thread then fetch it with https://api.slack.com/methods/conversations.replies
+	// If not a thread then make another call with inclusive false and limit -1
 	body, err := client.get("conversations.history",
 		map[string]string{
-			"channel": channelID,
-			"oldest":  strconv.FormatInt(startTime.Unix(), 10),
-			"latest":  strconv.FormatInt(endTime.Unix(), 10)})
+			"channel":   channelID,
+			"oldest":    startTimestamp,
+			"inclusive": "true",
+			"limit":     strconv.Itoa(limit)})
 	if err != nil {
 		return nil, err
 	}

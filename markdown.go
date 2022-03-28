@@ -14,6 +14,7 @@ type UserProvider interface {
 	getUsername(string) (string, error)
 }
 
+// TODO: regexp.ReplaceAllStringFunc??
 func interpolateUsers(client UserProvider, s string) (string, error) {
 	userLocations := userRE.FindAllStringIndex(s, -1)
 	out := &strings.Builder{}

@@ -1,33 +1,36 @@
 package main
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"log"
-	"time"
+	"regexp"
+	"strconv"
 )
 
+var permalinkRE = regexp.MustCompile("https://[^./]+.slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
+
+// https://github.slack.com/archives/CP9GMKJCE/p1648028606962719
+// returns (CP9GMKJCE, 1648028606.962719, nil)
+func parsePermalink(link string) (string, string, error) {
+	result := permalinkRE.FindStringSubmatch(link)
+	if result == nil {
+		return "", "", fmt.Errorf("not a permalink: %q", link)
+	}
+
+	return result[1], result[2] + "." + result[3], nil
+}
+
 func realMain() error {
-	if *channelFlag == "" {
-		return errors.New("channel name is required")
-	}
-	if *startFlag == "" {
-		return errors.New("start time is required")
-	}
-	if *endFlag == "" {
-		return errors.New("end time is required")
+	channelID, timestamp, err := parsePermalink(*startFlag)
+	if err != nil {
+		return err
 	}
 
-	startTime, err := time.Parse("2006-01-02 15:04", *startFlag)
+	limit, err := strconv.Atoi(*endFlag)
 	if err != nil {
-		return errors.New("start time not in expected format")
-	}
-
-	endTime, err := time.Parse("2006-01-02 15:04", *endFlag)
-	if err != nil {
-		return errors.New("start time not in expected format")
+		return err
 	}
 
 	logger := log.New(io.Discard, "", log.LstdFlags)
@@ -50,12 +53,7 @@ func realMain() error {
 		return err
 	}
 
-	channelID, err := client.getChannelID(*channelFlag)
-	if err != nil {
-		return err
-	}
-
-	history, err := client.history(channelID, startTime, endTime)
+	history, err := client.history(channelID, timestamp, limit)
 	if err != nil {
 		return err
 	}
@@ -77,13 +75,11 @@ func realMain() error {
 //   ./slack-to-md \
 //       https://github.slack.com/archives/C0H15BV4K/p1648489045530009 \
 //       https://github.slack.com/archives/C0H15BV4K/p1648489045530009 -- get messages between these two, inclusive
-var channelFlag = flag.String("channel", "", "Channel name to read from")
-var startFlag = flag.String("start", "", "Retrieve messages after this time")
-var endFlag = flag.String("end", "", "Retrieve messages before this time")
+var startFlag = flag.String("start", "", "Permalink to start reading messages from. If a thread, that entire thread will be read.")
+var endFlag = flag.String("end", "20", "Permalink of last message to read, or an integer number of messages to read.")
 var verboseFlag = flag.Bool("v", false, "Verbose output")
 
 func main() {
-	log.Default()
 	flag.Parse()
 	err := realMain()
 	if err != nil {
