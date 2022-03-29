@@ -1,4 +1,4 @@
-package main
+package slackclient
 
 import (
 	"database/sql"
@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"runtime"
 
 	_ "modernc.org/sqlite"
 )
@@ -21,9 +22,21 @@ type SlackAuth struct {
 var stmt = "SELECT value FROM cookies WHERE host_key=\".slack.com\" AND name=\"d\""
 
 func getCookie() (string, error) {
-	home := os.Getenv("HOME")
-	// TODO: change for Linux
-	cookies := path.Join(home, "Library", "Application Support", "Slack", "Cookies")
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	var config string
+	switch runtime.GOOS {
+	case "darwin":
+		config = path.Join(home, "Library", "Application Support")
+	case "linux":
+		config = path.Join(home, ".config")
+	default:
+		return "", fmt.Errorf("unsupported platform %q", runtime.GOOS)
+	}
+	cookies := path.Join(config, "Slack", "Cookies")
 
 	db, err := sql.Open("sqlite", cookies)
 	if err != nil {

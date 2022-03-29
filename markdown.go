@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"regexp"
+	"rneatherway/slack-to-md/slackclient"
 	"strconv"
 	"strings"
 	"time"
@@ -11,10 +12,9 @@ import (
 var userRE = regexp.MustCompile("<@[A-Z0-9]+>")
 
 type UserProvider interface {
-	getUsername(string) (string, error)
+	UsernameForID(string) (string, error)
 }
 
-// TODO: regexp.ReplaceAllStringFunc??
 func interpolateUsers(client UserProvider, s string) (string, error) {
 	userLocations := userRE.FindAllStringIndex(s, -1)
 	out := &strings.Builder{}
@@ -23,7 +23,7 @@ func interpolateUsers(client UserProvider, s string) (string, error) {
 		start := userLocation[0]
 		end := userLocation[1]
 
-		username, err := client.getUsername(s[start+2 : end-1])
+		username, err := client.UsernameForID(s[start+2 : end-1])
 		if err != nil {
 			return "", err
 		}
@@ -38,7 +38,7 @@ func interpolateUsers(client UserProvider, s string) (string, error) {
 	return out.String(), nil
 }
 
-func convertMessagesToMarkdown(client *SlackClient, messages []Message) (string, error) {
+func convertMessagesToMarkdown(client *slackclient.SlackClient, messages []slackclient.Message) (string, error) {
 	b := &strings.Builder{}
 
 	for _, message := range messages {
@@ -54,7 +54,7 @@ func convertMessagesToMarkdown(client *SlackClient, messages []Message) (string,
 
 		tm := time.Unix(msgTime, 0)
 
-		username, err := client.getUsername(message.User)
+		username, err := client.UsernameForID(message.User)
 		if err != nil {
 			return "", err
 		}
@@ -64,16 +64,29 @@ func convertMessagesToMarkdown(client *SlackClient, messages []Message) (string,
 		b.WriteString("** at ")
 		b.WriteString(tm.Format("2006-01-02 15:04"))
 		b.WriteString("\n>\n")
-		text, err := interpolateUsers(client, message.Text)
-		if err != nil {
-			return "", err
+
+		if message.Text != "" {
+			text, err := interpolateUsers(client, message.Text)
+			if err != nil {
+				return "", err
+			}
+
+			for _, line := range strings.Split(text, "\n") {
+				b.WriteString("> ")
+				b.WriteString(line)
+				b.WriteString("\n")
+			}
 		}
 
-		for _, line := range strings.Split(text, "\n") {
-			b.WriteString("> ")
-			b.WriteString(line)
-			b.WriteString("\n")
+		// These seem to be mostly bot messages so far. Perhaps we should just skip them?
+		for _, a := range message.Attachments {
+			for _, line := range strings.Split(a.Text, "\n") {
+				b.WriteString("> ")
+				b.WriteString(line)
+				b.WriteString("\n")
+			}
 		}
+
 		b.WriteString("\n")
 	}
 

@@ -1,4 +1,4 @@
-package main
+package slackclient
 
 import (
 	"encoding/json"
@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strconv"
 	"time"
 )
@@ -21,11 +22,17 @@ type CursorResponseMetadata struct {
 	ResponseMetadata Cursor `json:"response_metadata"`
 }
 
+type Attachment struct {
+	ID   int
+	Text string
+}
+
 type Message struct {
-	User     string
-	Username string
-	Text     string
-	Ts       string
+	User        string
+	Username    string
+	Text        string
+	Attachments []Attachment
+	Ts          string
 }
 
 type HistoryResponse struct {
@@ -70,28 +77,43 @@ type SlackClient struct {
 	log       *log.Logger
 }
 
-func NewSlackClient(cachePath string, auth *SlackAuth, team string, log *log.Logger) (*SlackClient, error) {
-	client := &SlackClient{
+func NewSlackClient(team string, log *log.Logger) (*SlackClient, error) {
+	dataHome := os.Getenv("XDG_DATA_HOME")
+	if dataHome == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+		dataHome = path.Join(home, ".local", ".share")
+	}
+	cachePath := path.Join(dataHome, "slack-to-md")
+
+	auth, err := getSlackAuth(team)
+	if err != nil {
+		return nil, err
+	}
+
+	c := &SlackClient{
 		cachePath: cachePath,
-		auth:      auth,
 		team:      team,
+		auth:      auth,
 		log:       log,
 	}
+
 	// TODO: this isn't safe, either move SlackClient to another package so that you have to use this constructor
 	// or all the 'public' methods have to guarantee that it's loaded.
-	err := client.loadCache()
-	return client, err
+	err = c.loadCache()
+	return c, err
 }
 
-// TODO: change client receiver to c
-func (client *SlackClient) get(path string, params map[string]string) ([]byte, error) {
-	u, err := url.Parse(fmt.Sprintf("https://%s.slack.com/api/", client.team))
+func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
+	u, err := url.Parse(fmt.Sprintf("https://%s.slack.com/api/", c.team))
 	if err != nil {
 		return nil, err
 	}
 	u.Path += path
 	q := u.Query()
-	q.Add("token", client.auth.Token)
+	q.Add("token", c.auth.Token)
 	for p := range params {
 		q.Add(p, params[p])
 	}
@@ -103,11 +125,11 @@ func (client *SlackClient) get(path string, params map[string]string) ([]byte, e
 		if err != nil {
 			return nil, err
 		}
-		for key := range client.auth.Cookies {
-			req.AddCookie(&http.Cookie{Name: key, Value: client.auth.Cookies[key]})
+		for key := range c.auth.Cookies {
+			req.AddCookie(&http.Cookie{Name: key, Value: c.auth.Cookies[key]})
 		}
 
-		resp, err := client.client.Do(req)
+		resp, err := c.client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +145,7 @@ func (client *SlackClient) get(path string, params map[string]string) ([]byte, e
 				return nil, err
 			}
 			d := time.Duration(s)
-			client.log.Printf("rate limited, waiting %ds", d)
+			c.log.Printf("rate limited, waiting %ds", d)
 			time.Sleep(d * time.Second)
 		} else if resp.StatusCode >= 300 {
 			return nil, fmt.Errorf("status code %d, headers: %q, body: %q", resp.StatusCode, resp.Header, body)
@@ -135,12 +157,12 @@ func (client *SlackClient) get(path string, params map[string]string) ([]byte, e
 	return body, nil
 }
 
-func (client *SlackClient) conversations(params map[string]string) ([]Channel, error) {
+func (c *SlackClient) conversations(params map[string]string) ([]Channel, error) {
 	channels := make([]Channel, 0, 1000)
 	conversations := &ConversationsResponse{}
 	for {
-		client.log.Printf("Fetching conversations with cursor %q", conversations.ResponseMetadata.NextCursor)
-		body, err := client.get("conversations.list",
+		c.log.Printf("Fetching conversations with cursor %q", conversations.ResponseMetadata.NextCursor)
+		body, err := c.get("conversations.list",
 			map[string]string{
 				"cursor":           conversations.ResponseMetadata.NextCursor,
 				"exclude_archived": "true"},
@@ -158,7 +180,7 @@ func (client *SlackClient) conversations(params map[string]string) ([]Channel, e
 		}
 
 		channels = append(channels, conversations.Channels...)
-		client.log.Printf("Fetched %d channels (total so far %d)",
+		c.log.Printf("Fetched %d channels (total so far %d)",
 			len(conversations.Channels),
 			len(channels))
 
@@ -170,8 +192,8 @@ func (client *SlackClient) conversations(params map[string]string) ([]Channel, e
 	return channels, nil
 }
 
-func (client *SlackClient) users(params map[string]string) (*UsersResponse, error) {
-	body, err := client.get("users.list", nil)
+func (c *SlackClient) users(params map[string]string) (*UsersResponse, error) {
+	body, err := c.get("users.list", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -189,22 +211,22 @@ func (client *SlackClient) users(params map[string]string) (*UsersResponse, erro
 	return users, nil
 }
 
-func (client *SlackClient) loadCache() error {
-	content, err := os.ReadFile(client.cachePath)
+func (c *SlackClient) loadCache() error {
+	content, err := os.ReadFile(c.cachePath)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	} else if err != nil {
 		return err
 	}
 
-	return json.Unmarshal(content, &client.cache)
+	return json.Unmarshal(content, &c.cache)
 }
 
-func (client *SlackClient) history(channelID string, startTimestamp string, limit int) (*HistoryResponse, error) {
+func (c *SlackClient) History(channelID string, startTimestamp string, limit int) (*HistoryResponse, error) {
 	// TODO: to support threads, first just get the start message.
 	// If a thread then fetch it with https://api.slack.com/methods/conversations.replies
 	// If not a thread then make another call with inclusive false and limit -1
-	body, err := client.get("conversations.history",
+	body, err := c.get("conversations.history",
 		map[string]string{
 			"channel":   channelID,
 			"oldest":    startTimestamp,
@@ -227,13 +249,18 @@ func (client *SlackClient) history(channelID string, startTimestamp string, limi
 	return historyResponse, nil
 }
 
-func (client *SlackClient) saveCache() error {
-	bs, err := json.Marshal(client.cache)
+func (c *SlackClient) saveCache() error {
+	bs, err := json.Marshal(c.cache)
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile(client.cachePath, bs, 0644)
+	err = os.MkdirAll(path.Dir(c.cachePath), 0755)
+	if err != nil {
+		return err
+	}
+
+	err = os.WriteFile(c.cachePath, bs, 0644)
 	if err != nil {
 		return err
 	}
@@ -241,54 +268,54 @@ func (client *SlackClient) saveCache() error {
 	return nil
 }
 
-func (client *SlackClient) getChannelID(name string) (string, error) {
-	if id, ok := client.cache.Channels[name]; ok {
+func (c *SlackClient) getChannelID(name string) (string, error) {
+	if id, ok := c.cache.Channels[name]; ok {
 		return id, nil
 	}
 
-	channels, err := client.conversations(nil)
+	channels, err := c.conversations(nil)
 	if err != nil {
 		return "", err
 	}
 
-	client.cache.Channels = make(map[string]string)
+	c.cache.Channels = make(map[string]string)
 	for _, ch := range channels {
-		client.cache.Channels[ch.Name] = ch.ID
+		c.cache.Channels[ch.Name] = ch.ID
 	}
 
-	err = client.saveCache()
+	err = c.saveCache()
 	if err != nil {
 		return "", err
 	}
 
-	if id, ok := client.cache.Channels[name]; ok {
+	if id, ok := c.cache.Channels[name]; ok {
 		return id, nil
 	}
 
 	return "", fmt.Errorf("no channel with name %q", name)
 }
 
-func (client *SlackClient) getUsername(id string) (string, error) {
-	if id, ok := client.cache.Users[id]; ok {
+func (c *SlackClient) UsernameForID(id string) (string, error) {
+	if id, ok := c.cache.Users[id]; ok {
 		return id, nil
 	}
 
-	ur, err := client.users(nil)
+	ur, err := c.users(nil)
 	if err != nil {
 		return "", err
 	}
 
-	client.cache.Users = make(map[string]string)
+	c.cache.Users = make(map[string]string)
 	for _, ch := range ur.Members {
-		client.cache.Users[ch.ID] = ch.Name
+		c.cache.Users[ch.ID] = ch.Name
 	}
 
-	err = client.saveCache()
+	err = c.saveCache()
 	if err != nil {
 		return "", err
 	}
 
-	if id, ok := client.cache.Users[id]; ok {
+	if id, ok := c.cache.Users[id]; ok {
 		return id, nil
 	}
 

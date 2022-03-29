@@ -1,32 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
 )
-
-type Y struct {
-	NextCursor string `json:"next_cursor"`
-}
-
-type X struct {
-	ResponseMetadata Y `json:"response_metadata"`
-}
-
-func TestUnmarshaling(t *testing.T) {
-	input := []byte("{\"response_metadata\":{\"next_cursor\":\"dGVhbTpDMEY3SEpCNlk=\"}}")
-	bs := &X{}
-	err := json.Unmarshal(input, bs)
-
-	if err != nil {
-		t.Error(err)
-	}
-
-	if bs.ResponseMetadata.NextCursor == "" {
-		t.Error()
-	}
-}
 
 func TestUserRE(t *testing.T) {
 	results := userRE.FindAllStringIndex("<@UP7UAV3NH> <@UPA5ANVNJ> hello", -1)
@@ -45,7 +22,7 @@ type TestUserProvider struct {
 	counter int
 }
 
-func (c *TestUserProvider) getUsername(id string) (string, error) {
+func (c *TestUserProvider) UsernameForID(id string) (string, error) {
 	c.counter += 1
 	return fmt.Sprintf("test_username_%d", c.counter), nil
 }

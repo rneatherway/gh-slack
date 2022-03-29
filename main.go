@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"regexp"
+	"rneatherway/slack-to-md/slackclient"
 	"strconv"
 )
 
@@ -38,22 +39,14 @@ func realMain() error {
 		logger = log.Default()
 	}
 
-	// TODO: should this be part of the SlackClient?
-	auth, err := getSlackAuth("github")
-	if err != nil {
-		return err
-	}
-
-	client, err := NewSlackClient(
-		"cache.json", // TODO: Move this to XDG_DATA_HOME or ~/.local/share (or MacOS equivalent?)
-		auth,
+	client, err := slackclient.NewSlackClient(
 		"github",
 		logger)
 	if err != nil {
 		return err
 	}
 
-	history, err := client.history(channelID, timestamp, limit)
+	history, err := client.History(channelID, timestamp, limit)
 	if err != nil {
 		return err
 	}
