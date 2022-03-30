@@ -1,14 +1,17 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"regexp"
 	"rneatherway/slack-to-md/slackclient"
-	"strconv"
+
+	"github.com/jessevdk/go-flags"
 )
+
+// TODO: Move into `internal` directory so we don't get imported
 
 var permalinkRE = regexp.MustCompile("https://[^./]+.slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
 
@@ -23,19 +26,27 @@ func parsePermalink(link string) (string, string, error) {
 	return result[1], result[2] + "." + result[3], nil
 }
 
+var opts struct {
+	Args struct {
+		Start string `description:"Permalink for the first message to fetch. Following messages are then fetched from that channel (or thread if applicable)" required:"true"`
+	} `positional-args:"yes"`
+	Limit   int  `short:"l" long:"limit" default:"20" description:"Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched)"`
+	Verbose bool `short:"v" long:"verbose" description:"Show verbose debug information"`
+}
+
 func realMain() error {
-	channelID, timestamp, err := parsePermalink(*startFlag)
+	_, err := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash).Parse()
 	if err != nil {
 		return err
 	}
 
-	limit, err := strconv.Atoi(*endFlag)
+	channelID, timestamp, err := parsePermalink(opts.Args.Start)
 	if err != nil {
 		return err
 	}
 
 	logger := log.New(io.Discard, "", log.LstdFlags)
-	if *verboseFlag {
+	if opts.Verbose {
 		logger = log.Default()
 	}
 
@@ -46,12 +57,12 @@ func realMain() error {
 		return err
 	}
 
-	history, err := client.History(channelID, timestamp, limit)
+	history, err := client.History(channelID, timestamp, opts.Limit)
 	if err != nil {
 		return err
 	}
 
-	markdown, err := convertMessagesToMarkdown(client, history.Messages)
+	markdown, err := convertMessagesToMarkdown(client, history)
 	if err != nil {
 		return err
 	}
@@ -61,21 +72,10 @@ func realMain() error {
 	return nil
 }
 
-// TODO: allow grabbing a thread
-// TODO: try a permalink-based interface. E.g:
-//   ./slack-to-md https://github.slack.com/archives/C0H15BV4K/p1648489045530009 -- get a thread
-//   ./slack-to-md https://github.slack.com/archives/C0H15BV4K/p1648489045530009 30 -- get 30 messages starting at that one
-//   ./slack-to-md \
-//       https://github.slack.com/archives/C0H15BV4K/p1648489045530009 \
-//       https://github.slack.com/archives/C0H15BV4K/p1648489045530009 -- get messages between these two, inclusive
-var startFlag = flag.String("start", "", "Permalink to start reading messages from. If a thread, that entire thread will be read.")
-var endFlag = flag.String("end", "20", "Permalink of last message to read, or an integer number of messages to read.")
-var verboseFlag = flag.Bool("v", false, "Verbose output")
-
 func main() {
-	flag.Parse()
 	err := realMain()
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 }

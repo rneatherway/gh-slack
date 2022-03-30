@@ -33,11 +33,13 @@ type Message struct {
 	Text        string
 	Attachments []Attachment
 	Ts          string
+	Type        string
 }
 
 type HistoryResponse struct {
 	CursorResponseMetadata
 	Ok       bool
+	HasMore  bool `json:"has_more"`
 	Messages []Message
 }
 
@@ -223,15 +225,11 @@ func (c *SlackClient) loadCache() error {
 }
 
 func (c *SlackClient) History(channelID string, startTimestamp string, limit int) (*HistoryResponse, error) {
-	// TODO: to support threads, first just get the start message.
-	// If a thread then fetch it with https://api.slack.com/methods/conversations.replies
-	// If not a thread then make another call with inclusive false and limit -1
-	body, err := c.get("conversations.history",
+	body, err := c.get("conversations.replies",
 		map[string]string{
 			"channel":   channelID,
-			"oldest":    startTimestamp,
-			"inclusive": "true",
-			"limit":     strconv.Itoa(limit)})
+			"ts":        startTimestamp,
+			"inclusive": "true"})
 	if err != nil {
 		return nil, err
 	}
@@ -243,9 +241,35 @@ func (c *SlackClient) History(channelID string, startTimestamp string, limit int
 	}
 
 	if !historyResponse.Ok {
-		return nil, fmt.Errorf("history response not OK: %s", body)
+		return nil, fmt.Errorf("conversations.replies response not OK: %s", body)
 	}
 
+	if len(historyResponse.Messages) > 1 {
+		// This was a thread, so we can return immediately
+		return historyResponse, nil
+	}
+
+	// Otherwise we read the general channel history
+	body, err = c.get("conversations.history",
+		map[string]string{
+			"channel":   channelID,
+			"oldest":    startTimestamp,
+			"inclusive": "true",
+			"limit":     strconv.Itoa(limit)})
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(body, historyResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	if !historyResponse.Ok {
+		return nil, fmt.Errorf("conversations.history response not OK: %s", body)
+	}
+	c.log.Println(string(body))
+	c.log.Printf("%#v", historyResponse)
 	return historyResponse, nil
 }
 

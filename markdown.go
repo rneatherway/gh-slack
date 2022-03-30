@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"rneatherway/slack-to-md/slackclient"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -38,9 +39,13 @@ func interpolateUsers(client UserProvider, s string) (string, error) {
 	return out.String(), nil
 }
 
-func convertMessagesToMarkdown(client *slackclient.SlackClient, messages []slackclient.Message) (string, error) {
+func convertMessagesToMarkdown(client *slackclient.SlackClient, history *slackclient.HistoryResponse) (string, error) {
 	b := &strings.Builder{}
 
+	messages := history.Messages
+	sort.Slice(messages, func(i, j int) bool {
+		return messages[i].Ts < messages[j].Ts // TODO: this string comparison only works with fixed-length timestamps, really we should compare the actual times (which we know how to compute below)
+	})
 	for _, message := range messages {
 		tsParts := strings.Split(message.Ts, ".")
 		if len(tsParts) != 2 {
@@ -88,6 +93,10 @@ func convertMessagesToMarkdown(client *slackclient.SlackClient, messages []slack
 		}
 
 		b.WriteString("\n")
+	}
+
+	if history.HasMore {
+		b.WriteString(":warning: some messages are missing")
 	}
 
 	return b.String(), nil
