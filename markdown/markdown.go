@@ -1,13 +1,14 @@
-package main
+package markdown
 
 import (
 	"fmt"
 	"regexp"
-	"rneatherway/slack-to-md/slackclient"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rneatherway/slack-to-md/slackclient"
 )
 
 var userRE = regexp.MustCompile("<@[A-Z0-9]+>")
@@ -39,26 +40,48 @@ func interpolateUsers(client UserProvider, s string) (string, error) {
 	return out.String(), nil
 }
 
-func convertMessagesToMarkdown(client *slackclient.SlackClient, history *slackclient.HistoryResponse) (string, error) {
+func parseUnixTimestamp(s string) (*time.Time, error) {
+	tsParts := strings.Split(s, ".")
+	if len(tsParts) != 2 {
+		return nil, fmt.Errorf("timestamp '%s' in not in <seconds>.<milliseconds> format", s)
+	}
+
+	seconds, err := strconv.ParseInt(tsParts[0], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	nanos, err := strconv.ParseInt(tsParts[1], 10, 64)
+	if err != nil {
+		return nil, err
+	}
+
+	result := time.Unix(seconds, nanos)
+	return &result, nil
+}
+
+func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryResponse) (string, error) {
 	b := &strings.Builder{}
-
 	messages := history.Messages
-	sort.Slice(messages, func(i, j int) bool {
-		return messages[i].Ts < messages[j].Ts // TODO: this string comparison only works with fixed-length timestamps, really we should compare the actual times (which we know how to compute below)
-	})
-	for _, message := range messages {
-		tsParts := strings.Split(message.Ts, ".")
-		if len(tsParts) != 2 {
-			return "", fmt.Errorf("timestamp '%s' in not in <seconds>.<milliseconds> format", message.Ts)
-		}
+	msgTimes := make(map[string]time.Time, len(messages))
 
-		msgTime, err := strconv.ParseInt(tsParts[0], 10, 64)
+	for _, message := range messages {
+		tm, err := parseUnixTimestamp(message.Ts)
 		if err != nil {
 			return "", err
 		}
 
-		tm := time.Unix(msgTime, 0)
+		msgTimes[message.Ts] = *tm
+	}
 
+	// It's surprising that these messages are not already always returned in date order,
+	// and actually I observed initially that they seemed to be, but at least some of the
+	// time they are returned in reverse order so it's simpler to just sort them now.
+	sort.Slice(messages, func(i, j int) bool {
+		return msgTimes[messages[i].Ts].Before(msgTimes[messages[j].Ts])
+	})
+
+	for _, message := range messages {
 		username, err := client.UsernameForID(message.User)
 		if err != nil {
 			return "", err
@@ -67,7 +90,7 @@ func convertMessagesToMarkdown(client *slackclient.SlackClient, history *slackcl
 		b.WriteString("> **")
 		b.WriteString(username)
 		b.WriteString("** at ")
-		b.WriteString(tm.Format("2006-01-02 15:04"))
+		b.WriteString(msgTimes[message.Ts].Format("2006-01-02 15:04"))
 		b.WriteString("\n>\n")
 
 		if message.Text != "" {

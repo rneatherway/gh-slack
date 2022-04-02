@@ -6,12 +6,12 @@ import (
 	"log"
 	"os"
 	"regexp"
-	"rneatherway/slack-to-md/slackclient"
+
+	"github.com/rneatherway/slack-to-md/markdown"
+	"github.com/rneatherway/slack-to-md/slackclient"
 
 	"github.com/jessevdk/go-flags"
 )
-
-// TODO: Move into `internal` directory so we don't get imported
 
 var permalinkRE = regexp.MustCompile("https://[^./]+.slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
 
@@ -28,7 +28,7 @@ func parsePermalink(link string) (string, string, error) {
 
 var opts struct {
 	Args struct {
-		Start string `description:"Permalink for the first message to fetch. Following messages are then fetched from that channel (or thread if applicable)" required:"true"`
+		Start string `value-name:"start" description:"Permalink for the first message to fetch. Following messages are then fetched from that channel (or thread if applicable)" required:"true"`
 	} `positional-args:"yes"`
 	Limit   int  `short:"l" long:"limit" default:"20" description:"Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched)"`
 	Verbose bool `short:"v" long:"verbose" description:"Show verbose debug information"`
@@ -50,8 +50,8 @@ func realMain() error {
 		logger = log.Default()
 	}
 
-	client, err := slackclient.NewSlackClient(
-		"github",
+	client, err := slackclient.New(
+		"github", // This could be made configurable at some point
 		logger)
 	if err != nil {
 		return err
@@ -62,7 +62,7 @@ func realMain() error {
 		return err
 	}
 
-	markdown, err := convertMessagesToMarkdown(client, history)
+	markdown, err := markdown.FromMessages(client, history)
 	if err != nil {
 		return err
 	}

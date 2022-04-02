@@ -79,7 +79,7 @@ type SlackClient struct {
 	log       *log.Logger
 }
 
-func NewSlackClient(team string, log *log.Logger) (*SlackClient, error) {
+func New(team string, log *log.Logger) (*SlackClient, error) {
 	dataHome := os.Getenv("XDG_DATA_HOME")
 	if dataHome == "" {
 		home, err := os.UserHomeDir()
@@ -102,8 +102,6 @@ func NewSlackClient(team string, log *log.Logger) (*SlackClient, error) {
 		log:       log,
 	}
 
-	// TODO: this isn't safe, either move SlackClient to another package so that you have to use this constructor
-	// or all the 'public' methods have to guarantee that it's loaded.
 	err = c.loadCache()
 	return c, err
 }
