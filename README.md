@@ -1,30 +1,42 @@
-# slack-to-md
+# gh-slack
 
-This project provides a means of archiving a Slack conversation or thread as markdown.
+This project provides a means of archiving a Slack conversation or thread as markdown. For convenience it is installable as a `gh` extension.
+
 
 ## Installation
 
-    go install github.com/rneatherway/slack-to-md/cmd/slack-to-md@latest
+    gh extension install https://github.com/rneatherway/gh-slack
+
 
 ## Usage
 
 ```
 Usage:
-  main [OPTIONS] [Start]
+  gh-slack [OPTIONS] [Start]
 
 Application Options:
   -l, --limit=   Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched) (default: 20)
   -v, --verbose  Show verbose debug information
+      --version  Output version information
 
 Help Options:
   -h, --help     Show this help message
 
 Arguments:
-  Start:         Permalink for the first message to fetch. Following messages are then fetched from that channel(or thread if applicable)
+  Start:         Required. Permalink for the first message to fetch. Following messages are then fetched from that channel (or thread if applicable)
 ```
+
 
 ## Limitations
 
 Many and varied, but at least:
 
 * No paging is used when fetching messages, so if the conversation is too long the output will be truncated.
+
+
+## Development
+
+To release a new version, simply tag it. The `goreleaser` workflow will take care of the rest. E.g:
+
+    git tag 0.0.6
+    git push origin 0.0.6
