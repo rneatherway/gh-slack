@@ -8,9 +8,9 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/rneatherway/slack-to-md/markdown"
-	"github.com/rneatherway/slack-to-md/slackclient"
-	"github.com/rneatherway/slack-to-md/version"
+	"github.com/rneatherway/slack-to-md/internal/markdown"
+	"github.com/rneatherway/slack-to-md/internal/slackclient"
+	"github.com/rneatherway/slack-to-md/internal/version"
 
 	"github.com/jessevdk/go-flags"
 )

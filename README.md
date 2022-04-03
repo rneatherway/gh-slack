@@ -4,7 +4,7 @@ This project provides a means of archiving a Slack conversation or thread as mar
 
 ## Installation
 
-    go install github.com/rneatherway/slack-to-md/cmd/slack-to-md@latest
+    go install github.com/rneatherway/slack-to-md/internal/cmd/slack-to-md@latest
 
 ## Usage
 
