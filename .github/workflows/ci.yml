@@ -37,25 +37,3 @@ jobs:
           go-version: 1.17.1
       - name: Test
         run: go test ./...
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-20.04
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: 1.17.1
-      - name: Check Modules
-        run: |
-          go mod tidy
-          if [ ! -z "$(git status --porcelain=v1)" ]; then
-            >&2 echo "Please run \`go mod tidy\` and commit the result."
-            exit 1
-          fi
-      - name: Lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.29

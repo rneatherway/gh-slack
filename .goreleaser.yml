@@ -2,7 +2,7 @@ project_name: slack
 
 builds:
   - main: ./cmd/slack-to-md
-  - goos: [linux, darwin]
+    goos: [linux, darwin]
     goarch: [amd64, arm64]
     ldflags:
       - -X github.com/rneatherway/slack/version.version={{.Version}}
