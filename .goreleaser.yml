@@ -1,6 +1,7 @@
 project_name: slack
 
 builds:
+  - main: ./cmd/slack-to-md
   - goos: [linux, darwin]
     goarch: [amd64, arm64]
     ldflags:
@@ -10,3 +11,4 @@ builds:
 archives:
   - format: binary
     name_template: "slack-{{.Os}}-{{.Arch}}"
+
