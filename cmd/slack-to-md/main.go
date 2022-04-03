@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/rneatherway/slack-to-md/markdown"
 	"github.com/rneatherway/slack-to-md/slackclient"
+	"github.com/rneatherway/slack-to-md/version"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -28,16 +30,26 @@ func parsePermalink(link string) (string, string, error) {
 
 var opts struct {
 	Args struct {
-		Start string `value-name:"start" description:"Permalink for the first message to fetch. Following messages are then fetched from that channel (or thread if applicable)" required:"true"`
+		Start string `description:"Required. Permalink for the first message to fetch. Following messages are then fetched from that channel (or thread if applicable)"`
 	} `positional-args:"yes"`
 	Limit   int  `short:"l" long:"limit" default:"20" description:"Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched)"`
 	Verbose bool `short:"v" long:"verbose" description:"Show verbose debug information"`
+	Version bool `long:"version" description:"Output version information"`
 }
 
 func realMain() error {
 	_, err := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash).Parse()
 	if err != nil {
 		return err
+	}
+
+	if opts.Version {
+		fmt.Printf("gh-slack %s (%s)\n", version.Version(), version.Commit())
+		return nil
+	}
+
+	if opts.Args.Start == "" {
+		return errors.New("the required argument `Start` was not provided")
 	}
 
 	channelID, timestamp, err := parsePermalink(opts.Args.Start)

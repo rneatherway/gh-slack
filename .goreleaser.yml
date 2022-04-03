@@ -1,0 +1,12 @@
+project_name: slack
+
+builds:
+  - goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -X github.com/rneatherway/slack/version.version={{.Version}}
+      - -X github.com/rneatherway/slack/version.commit={{.Commit}}
+
+archives:
+  - format: binary
+    name_template: "slack-{{.Os}}-{{.Arch}}"
