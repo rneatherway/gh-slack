@@ -3,8 +3,12 @@ module github.com/rneatherway/slack-to-md
 go 1.17
 
 require (
+	github.com/jessevdk/go-flags v1.5.0
+	modernc.org/sqlite v1.15.3
+)
+
+require (
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/jessevdk/go-flags v1.5.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
@@ -19,7 +23,6 @@ require (
 	modernc.org/mathutil v1.4.1 // indirect
 	modernc.org/memory v1.0.7 // indirect
 	modernc.org/opt v0.1.1 // indirect
-	modernc.org/sqlite v1.15.3 // indirect
 	modernc.org/strutil v1.1.1 // indirect
 	modernc.org/token v1.0.0 // indirect
 )
