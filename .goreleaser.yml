@@ -5,8 +5,8 @@ builds:
     goos: [linux, darwin]
     goarch: [amd64, arm64]
     ldflags:
-      - -X github.com/rneatherway/slack/version.version={{.Version}}
-      - -X github.com/rneatherway/slack/version.commit={{.Commit}}
+      - -X github.com/rneatherway/slack-to-md/internal/version.version={{.Version}}
+      - -X github.com/rneatherway/slack-to-md/internal/version.commit={{.Commit}}
 
 archives:
   - format: binary
