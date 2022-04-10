@@ -17,9 +17,11 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-var permalinkRE = regexp.MustCompile("https://[^./]+.slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
-var nwoRE = regexp.MustCompile("^/[^/]+/[^/]+/?$")
-var issueRE = regexp.MustCompile("^/[^/]+/[^/]+/issues/[0-9]+/?$")
+var (
+	permalinkRE = regexp.MustCompile("https://[^./]+.slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
+	nwoRE       = regexp.MustCompile("^/[^/]+/[^/]+/?$")
+	issueRE     = regexp.MustCompile("^/[^/]+/[^/]+/issues/[0-9]+/?$")
+)
 
 // https://github.slack.com/archives/CP9GMKJCE/p1648028606962719
 // returns (CP9GMKJCE, 1648028606.962719, nil)
@@ -118,7 +120,7 @@ func realMain() error {
 		}
 		gh.AddComment(issueUrl, channelInfo, output)
 	} else {
-		fmt.Println(output)
+		os.Stdout.WriteString(output)
 	}
 
 	return nil
