@@ -49,6 +49,11 @@ type Channel struct {
 	Is_Channel bool
 }
 
+type ChannelInfoResponse struct {
+	Ok      bool
+	Channel Channel
+}
+
 type ConversationsResponse struct {
 	CursorResponseMetadata
 	Ok       bool
@@ -155,6 +160,26 @@ func (c *SlackClient) get(path string, params map[string]string) ([]byte, error)
 	}
 
 	return body, nil
+}
+
+func (c *SlackClient) ChannelInfo(id string) (*Channel, error) {
+	body, err := c.get("conversations.info",
+		map[string]string{"channel": id})
+	if err != nil {
+		return nil, err
+	}
+
+	channelInfoReponse := &ChannelInfoResponse{}
+	err = json.Unmarshal(body, channelInfoReponse)
+	if err != nil {
+		return nil, err
+	}
+
+	if !channelInfoReponse.Ok {
+		return nil, fmt.Errorf("conversations.info response not OK: %s", body)
+	}
+
+	return &channelInfoReponse.Channel, nil
 }
 
 func (c *SlackClient) conversations(params map[string]string) ([]Channel, error) {

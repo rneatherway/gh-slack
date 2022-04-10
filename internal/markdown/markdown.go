@@ -87,11 +87,9 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 			return "", err
 		}
 
-		b.WriteString("> **")
-		b.WriteString(username)
-		b.WriteString("** at ")
-		b.WriteString(msgTimes[message.Ts].Format("2006-01-02 15:04"))
-		b.WriteString("\n>\n")
+		fmt.Fprintf(b, "> **%s** at %s\n>\n",
+			username,
+			msgTimes[message.Ts].Format("2006-01-02 15:04"))
 
 		if message.Text != "" {
 			text, err := interpolateUsers(client, message.Text)
@@ -100,18 +98,15 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 			}
 
 			for _, line := range strings.Split(text, "\n") {
-				b.WriteString("> ")
-				b.WriteString(line)
-				b.WriteString("\n")
+				// TODO: Might be a good idea to escape 'line'
+				fmt.Fprintf(b, "> %s\n", line)
 			}
 		}
 
 		// These seem to be mostly bot messages so far. Perhaps we should just skip them?
 		for _, a := range message.Attachments {
 			for _, line := range strings.Split(a.Text, "\n") {
-				b.WriteString("> ")
-				b.WriteString(line)
-				b.WriteString("\n")
+				fmt.Fprintf(b, "> %s\n", line)
 			}
 		}
 
@@ -123,4 +118,8 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 	}
 
 	return b.String(), nil
+}
+
+func WrapInDetails(s string) string {
+	return fmt.Sprintf("<details>\n  <summary>Click to expand</summary>\n\n%s\n</details>", s)
 }
