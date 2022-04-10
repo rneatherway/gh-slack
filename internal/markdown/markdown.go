@@ -122,10 +122,6 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 		b.WriteString("\n")
 	}
 
-	if history.HasMore {
-		b.WriteString(":warning: some messages are missing")
-	}
-
 	return b.String(), nil
 }
 
