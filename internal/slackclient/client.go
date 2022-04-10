@@ -29,7 +29,7 @@ type Attachment struct {
 
 type Message struct {
 	User        string
-	Username    string
+	BotID       string `json:"bot_id"`
 	Text        string
 	Attachments []Attachment
 	Ts          string
