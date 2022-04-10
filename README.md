@@ -18,6 +18,8 @@ Application Options:
   -l, --limit=   Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched) (default: 20)
   -v, --verbose  Show verbose debug information
       --version  Output version information
+  -d, --details  Wrap the markdown output in HTML <details> tags
+  -i, --issue=   The URL of a repository to post the output as a new issue, or the URL of an issue to add a comment to that issue
 
 Help Options:
   -h, --help     Show this help message
