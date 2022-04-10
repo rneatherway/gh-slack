@@ -1,12 +1,12 @@
 project_name: slack
 
 builds:
-  - main: ./cmd/slack-to-md
+  - main: ./cmd/gh-slack
     goos: [linux, darwin]
     goarch: [amd64, arm64]
     ldflags:
-      - -X github.com/rneatherway/slack-to-md/internal/version.version={{.Version}}
-      - -X github.com/rneatherway/slack-to-md/internal/version.commit={{.Commit}}
+      - -X github.com/rneatherway/gh-slack/internal/version.version={{.Version}}
+      - -X github.com/rneatherway/gh-slack/internal/version.commit={{.Commit}}
 
 archives:
   - format: binary

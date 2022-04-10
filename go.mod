@@ -1,4 +1,4 @@
-module github.com/rneatherway/slack-to-md
+module github.com/rneatherway/gh-slack
 
 go 1.17
 

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rneatherway/slack-to-md/internal/slackclient"
+	"github.com/rneatherway/gh-slack/internal/slackclient"
 )
 
 var userRE = regexp.MustCompile("<@[A-Z0-9]+>")
