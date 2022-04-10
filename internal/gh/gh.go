@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/cli/go-gh"
-	"github.com/rneatherway/slack-to-md/internal/slackclient"
+	"github.com/rneatherway/gh-slack/internal/slackclient"
 )
 
 func NewIssue(repoUrl string, channel *slackclient.Channel, content string) error {

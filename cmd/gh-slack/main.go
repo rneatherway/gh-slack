@@ -9,10 +9,10 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/rneatherway/slack-to-md/internal/gh"
-	"github.com/rneatherway/slack-to-md/internal/markdown"
-	"github.com/rneatherway/slack-to-md/internal/slackclient"
-	"github.com/rneatherway/slack-to-md/internal/version"
+	"github.com/rneatherway/gh-slack/internal/gh"
+	"github.com/rneatherway/gh-slack/internal/markdown"
+	"github.com/rneatherway/gh-slack/internal/slackclient"
+	"github.com/rneatherway/gh-slack/internal/version"
 
 	"github.com/jessevdk/go-flags"
 )
