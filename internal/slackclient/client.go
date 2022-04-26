@@ -95,7 +95,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	}
 	cachePath := path.Join(dataHome, "gh-slack")
 
-	auth, err := getSlackAuth(team)
+	auth, err := getSlackAuthFromEnv()
 	if err != nil {
 		return nil, err
 	}

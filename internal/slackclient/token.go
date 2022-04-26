@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"regexp"
 	"runtime"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -87,4 +89,31 @@ func getSlackAuth(team string) (*SlackAuth, error) {
 	}
 
 	return &SlackAuth{Token: string(matches[1]), Cookies: map[string]string{"d": cookie}}, nil
+}
+
+func getSlackAuthFromEnv() (*SlackAuth, error) {
+	slackAuth := os.Getenv("SLACK_AUTH")
+	if slackAuth == "" {
+		return nil, errors.New("environment variable SLACK_AUTH not set")
+	}
+
+	token, cookie, found := strings.Cut(slackAuth, "\n")
+	if !found {
+		return nil, errors.New("environment variable SLACK_AUTH not in expected format")
+	}
+
+	key, value, found := strings.Cut(cookie, "=")
+	if !found {
+		return nil, errors.New("environment variable SLACK_AUTH not in expected format")
+	}
+
+	cookie, err := url.PathUnescape(value)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unescape cookie value: %w", err)
+	}
+
+	return &SlackAuth{
+		Token:   token,
+		Cookies: map[string]string{key: cookie},
+	}, nil
 }
