@@ -1,6 +1,6 @@
 module github.com/rneatherway/gh-slack
 
-go 1.17
+go 1.18
 
 require (
 	github.com/cli/go-gh v0.0.3
