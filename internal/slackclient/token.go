@@ -91,7 +91,7 @@ func getSlackAuth(team string) (*SlackAuth, error) {
 	return &SlackAuth{Token: string(matches[1]), Cookies: map[string]string{"d": cookie}}, nil
 }
 
-var errorNoSlackAuth = errors.New("environment variable SLACK_AUTH not in expected format. Try cloning https://github.com/chrisgavin/slacktoken and running `export SLACK_TOKEN=\"$(python3 -m slacktoken get --workspace github)\"`")
+var errorNoSlackAuth = errors.New("environment variable SLACK_AUTH not in expected format. Try cloning https://github.com/chrisgavin/slacktoken and running `export SLACK_AUTH=\"$(python3 -m slacktoken get --workspace github)\"`")
 
 func getSlackAuthFromEnv() (*SlackAuth, error) {
 	slackAuth := os.Getenv("SLACK_AUTH")
