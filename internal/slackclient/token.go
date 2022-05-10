@@ -1,6 +1,9 @@
 package slackclient
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha1"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -13,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 
+	"golang.org/x/crypto/pbkdf2"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -21,7 +26,7 @@ type SlackAuth struct {
 	Cookies map[string]string
 }
 
-var stmt = "SELECT value FROM cookies WHERE host_key=\".slack.com\" AND name=\"d\""
+var stmt = "SELECT value, encrypted_value FROM cookies WHERE host_key=\".slack.com\" AND name=\"d\""
 
 func getCookie() (string, error) {
 	home, err := os.UserHomeDir()
@@ -46,12 +51,35 @@ func getCookie() (string, error) {
 	}
 
 	var cookie string
-	err = db.QueryRow(stmt).Scan(&cookie)
+	var encrypted_value []byte
+	err = db.QueryRow(stmt).Scan(&cookie, &encrypted_value)
 	if err != nil {
 		return "", err
 	}
 
-	return cookie, nil
+	if cookie != "" {
+		return cookie, nil
+	}
+
+	dk := pbkdf2.Key([]byte("YneykTcNQYMGhgiE8QgaLA=="), []byte("saltysalt"), 1003, 16, sha1.New)
+
+	block, err := aes.NewCipher(dk)
+	if err != nil {
+		return "", err
+	}
+
+	iv := make([]byte, 16)
+	for i := range iv {
+		iv[i] = ' '
+	}
+
+	mode := cipher.NewCBCDecrypter(block, iv)
+
+	// plaintext := make([]byte, len(encrypted_value))
+	encrypted_value = encrypted_value[3:]
+	mode.CryptBlocks(encrypted_value, encrypted_value)
+
+	return string(encrypted_value), nil
 }
 
 var apiTokenRE = regexp.MustCompile("\"api_token\":\"([^\"]+)\"")

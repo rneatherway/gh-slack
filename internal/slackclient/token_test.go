@@ -1,6 +1,3 @@
-//go:build network
-// +build network
-
 // These tests require that you be logged into Slack on the current machine.
 // You must also pass '-tags network' to 'go test'
 package slackclient
@@ -12,6 +9,7 @@ func TestGetCookie(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
+	t.Error(cookie)
 
 	if cookie == "" {
 		t.Error("empty cookie")
