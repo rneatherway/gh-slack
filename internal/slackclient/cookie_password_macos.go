@@ -4,11 +4,10 @@
 package slackclient
 
 import (
-	"errors"
 	"os"
 	"path"
 
-	"github.com/keybase/go-keychain"
+	"github.com/zalando/go-keyring"
 )
 
 func slackConfigDirs() []string {
@@ -20,26 +19,12 @@ func slackConfigDirs() []string {
 }
 
 func cookiePassword() ([]byte, error) {
-	query := keychain.NewItem()
-	query.SetSecClass(keychain.SecClassGenericPassword)
-	query.SetService("Slack Safe Storage")
-	query.SetAccount("Slack")
-	query.SetMatchLimit(keychain.MatchLimitOne)
-	query.SetReturnAttributes(true)
-	query.SetReturnData(true)
-	results, err := keychain.QueryItem(query)
+	secret, err := keyring.Get("Slack Safe Storage", "Slack")
 	if err != nil {
 		return nil, err
 	}
 
-	switch len(results) {
-	case 0:
-		return nil, errors.New("no matching unlocked items found")
-	case 1:
-		return results[0].Data, nil
-	default:
-		return nil, errors.New("multiple items found")
-	}
+	return []byte(secret), nil
 }
 
 func iterations() int {
