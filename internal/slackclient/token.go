@@ -28,6 +28,10 @@ type SlackAuth struct {
 
 var stmt = "SELECT value, encrypted_value FROM cookies WHERE host_key=\".slack.com\" AND name=\"d\""
 
+type CookieDecryptor interface {
+	Password() string
+}
+
 func getCookie() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -61,7 +65,13 @@ func getCookie() (string, error) {
 		return cookie, nil
 	}
 
-	dk := pbkdf2.Key([]byte("YneykTcNQYMGhgiE8QgaLA=="), []byte("saltysalt"), 1003, 16, sha1.New)
+	// We need to decrypt the cookie.
+
+	key, err := cookiePassword()
+	if err != nil {
+		return "", fmt.Errorf("failed to get cookie password: %w", err)
+	}
+	dk := pbkdf2.Key(key, []byte("saltysalt"), iterations(), 16, sha1.New)
 
 	block, err := aes.NewCipher(dk)
 	if err != nil {
@@ -75,11 +85,12 @@ func getCookie() (string, error) {
 
 	mode := cipher.NewCBCDecrypter(block, iv)
 
-	// plaintext := make([]byte, len(encrypted_value))
 	encrypted_value = encrypted_value[3:]
 	mode.CryptBlocks(encrypted_value, encrypted_value)
 
-	return string(encrypted_value), nil
+	bytesToStrip := int(encrypted_value[len(encrypted_value)-1])
+
+	return string(encrypted_value[:len(encrypted_value)-bytesToStrip]), nil
 }
 
 var apiTokenRE = regexp.MustCompile("\"api_token\":\"([^\"]+)\"")

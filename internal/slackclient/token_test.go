@@ -9,7 +9,6 @@ func TestGetCookie(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	t.Error(cookie)
 
 	if cookie == "" {
 		t.Error("empty cookie")

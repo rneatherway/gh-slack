@@ -9,12 +9,10 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/keybase/go-keychain"
 	"github.com/rneatherway/gh-slack/internal/gh"
 	"github.com/rneatherway/gh-slack/internal/markdown"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
 	"github.com/rneatherway/gh-slack/internal/version"
-	"github.com/zalando/go-keyring"
 
 	"github.com/jessevdk/go-flags"
 )
@@ -47,49 +45,7 @@ var opts struct {
 	Issue   string `short:"i" long:"issue" description:"The URL of a repository to post the output as a new issue, or the URL of an issue to add a comment to that issue"`
 }
 
-func testKeychain() error {
-	query := keychain.NewItem()
-	query.SetSecClass(keychain.SecClassGenericPassword)
-	query.SetService("Slack Safe Storage")
-	//query.SetAccount(account)
-	//query.SetAccessGroup(accessGroup)
-	query.SetMatchLimit(keychain.MatchLimitOne)
-	query.SetReturnAttributes(true)
-	query.SetReturnData(true)
-	results, err := keychain.QueryItem(query)
-	if err != nil {
-		return err
-	}
-	for _, r := range results {
-		fmt.Printf("%#v\n", r.Data)
-	}
-	return nil
-}
-
-func testKeyring() error {
-	// service := "my-app"
-	// user := "anon"
-	// password := "secret"
-
-	// // set password
-	// err := keyring.Set(service, user, password)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// get password
-	secret, err := keyring.Get("Slack Safe Storage", "Slack")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	log.Println(secret)
-	return nil
-}
-
 func realMain() error {
-	return testKeychain()
-
 	_, err := flags.NewParser(&opts, flags.HelpFlag|flags.PassDoubleDash).Parse()
 	if err != nil {
 		return err
