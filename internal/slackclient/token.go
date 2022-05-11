@@ -8,12 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"regexp"
-	"runtime"
 	"strings"
 
 	"golang.org/x/crypto/pbkdf2"
@@ -33,23 +33,28 @@ type CookieDecryptor interface {
 }
 
 func getCookie() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+	var cookieDBFile string
+
+	for _, config := range slackConfigDirs() {
+		cookieDBFile = path.Join(config, "Slack", "Cookies")
+		stat, err := os.Stat(cookieDBFile)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return "", fmt.Errorf("could not access Slack cookie database: %w", err)
+		}
+		if stat.IsDir() {
+			return "", fmt.Errorf("directory found at expected Slack cookie database location %q", cookieDBFile)
+		}
+		break
 	}
 
-	var config string
-	switch runtime.GOOS {
-	case "darwin":
-		config = path.Join(home, "Library", "Application Support")
-	case "linux":
-		config = path.Join(home, ".config")
-	default:
-		return "", fmt.Errorf("unsupported platform %q", runtime.GOOS)
+	if cookieDBFile == "" {
+		return "", errors.New("no Slack cookie database found. Are you definitely logged in?")
 	}
-	cookies := path.Join(config, "Slack", "Cookies")
 
-	db, err := sql.Open("sqlite", cookies)
+	db, err := sql.Open("sqlite", cookieDBFile)
 	if err != nil {
 		return "", err
 	}

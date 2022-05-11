@@ -9,6 +9,15 @@ import (
 	"r00t2.io/gosecret"
 )
 
+func slackConfigDirs() []string {
+	if xdgConfigDir, found := os.LookupEnv("XDG_CONFIG_DIR"); found {
+		return []string{xdgConfigDir}
+	}
+
+	home := os.Getenv("HOME")
+	return []string{path.Join(home, ".config")}
+}
+
 func cookiePassword() ([]byte, error) {
 	service, err := gosecret.NewService()
 	if err != nil {
