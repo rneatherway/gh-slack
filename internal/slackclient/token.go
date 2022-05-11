@@ -1,17 +1,22 @@
 package slackclient
 
 import (
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha1"
 	"database/sql"
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"regexp"
-	"runtime"
 	"strings"
+
+	"golang.org/x/crypto/pbkdf2"
 
 	_ "modernc.org/sqlite"
 )
@@ -21,37 +26,76 @@ type SlackAuth struct {
 	Cookies map[string]string
 }
 
-var stmt = "SELECT value FROM cookies WHERE host_key=\".slack.com\" AND name=\"d\""
+var stmt = "SELECT value, encrypted_value FROM cookies WHERE host_key=\".slack.com\" AND name=\"d\""
+
+type CookieDecryptor interface {
+	Password() string
+}
 
 func getCookie() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
+	var cookieDBFile string
+
+	for _, config := range slackConfigDirs() {
+		cookieDBFile = path.Join(config, "Slack", "Cookies")
+		stat, err := os.Stat(cookieDBFile)
+		if errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return "", fmt.Errorf("could not access Slack cookie database: %w", err)
+		}
+		if stat.IsDir() {
+			return "", fmt.Errorf("directory found at expected Slack cookie database location %q", cookieDBFile)
+		}
+		break
 	}
 
-	var config string
-	switch runtime.GOOS {
-	case "darwin":
-		config = path.Join(home, "Library", "Application Support")
-	case "linux":
-		config = path.Join(home, ".config")
-	default:
-		return "", fmt.Errorf("unsupported platform %q", runtime.GOOS)
+	if cookieDBFile == "" {
+		return "", errors.New("no Slack cookie database found. Are you definitely logged in?")
 	}
-	cookies := path.Join(config, "Slack", "Cookies")
 
-	db, err := sql.Open("sqlite", cookies)
+	db, err := sql.Open("sqlite", cookieDBFile)
 	if err != nil {
 		return "", err
 	}
 
 	var cookie string
-	err = db.QueryRow(stmt).Scan(&cookie)
+	var encrypted_value []byte
+	err = db.QueryRow(stmt).Scan(&cookie, &encrypted_value)
 	if err != nil {
 		return "", err
 	}
 
-	return cookie, nil
+	if cookie != "" {
+		return cookie, nil
+	}
+
+	// We need to decrypt the cookie.
+
+	key, err := cookiePassword()
+	if err != nil {
+		return "", fmt.Errorf("failed to get cookie password: %w", err)
+	}
+	dk := pbkdf2.Key(key, []byte("saltysalt"), iterations(), 16, sha1.New)
+
+	block, err := aes.NewCipher(dk)
+	if err != nil {
+		return "", err
+	}
+
+	iv := make([]byte, 16)
+	for i := range iv {
+		iv[i] = ' '
+	}
+
+	mode := cipher.NewCBCDecrypter(block, iv)
+
+	encrypted_value = encrypted_value[3:]
+	mode.CryptBlocks(encrypted_value, encrypted_value)
+
+	bytesToStrip := int(encrypted_value[len(encrypted_value)-1])
+
+	return string(encrypted_value[:len(encrypted_value)-bytesToStrip]), nil
 }
 
 var apiTokenRE = regexp.MustCompile("\"api_token\":\"([^\"]+)\"")
