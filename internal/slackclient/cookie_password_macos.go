@@ -10,7 +10,7 @@ func cookiePassword() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return secret, nil
+	return []byte(secret), nil
 }
 
 func iterations() int {
