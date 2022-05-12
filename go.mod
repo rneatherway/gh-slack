@@ -6,17 +6,15 @@ require (
 	github.com/billgraziano/dpapi v0.4.0
 	github.com/cli/go-gh v0.0.3
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/zalando/go-keyring v0.2.1
-	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	github.com/keybase/go-keychain v0.0.0-20220506172723-c18928ccd7f2
+	golang.org/x/crypto v0.0.0-20220507011949-2cf3adece122
 	modernc.org/sqlite v1.15.3
 	r00t2.io/gosecret v1.1.5
 )
 
 require (
-	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/cli/safeexec v1.0.0 // indirect
 	github.com/cli/shurcooL-graphql v0.0.1 // indirect
-	github.com/danieljoos/wincred v1.1.0 // indirect
 	github.com/godbus/dbus/v5 v5.0.6 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/henvic/httpretty v0.0.6 // indirect
