@@ -3,10 +3,11 @@ module github.com/rneatherway/gh-slack
 go 1.18
 
 require (
+	github.com/billgraziano/dpapi v0.4.0
 	github.com/cli/go-gh v0.0.3
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/zalando/go-keyring v0.2.1
-	golang.org/x/crypto v0.0.0-20220507011949-2cf3adece122
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	modernc.org/sqlite v1.15.3
 	r00t2.io/gosecret v1.1.5
 )
@@ -21,6 +22,7 @@ require (
 	github.com/henvic/httpretty v0.0.6 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	golang.org/x/mod v0.3.0 // indirect
 	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
