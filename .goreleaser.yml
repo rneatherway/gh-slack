@@ -1,14 +1,25 @@
 project_name: slack
 
 builds:
-  - main: ./cmd/gh-slack
-    goos: [linux, darwin, windows]
-    goarch: [amd64, arm64]
-    ignore:
-      - goos: linux
-        goarch: arm64
-      - goos: windows
-        goarch: arm64
+  - id: macos
+    main: ./cmd/gh-slack
+    goos:
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -X github.com/rneatherway/gh-slack/internal/version.version={{.Version}}
+      - -X github.com/rneatherway/gh-slack/internal/version.commit={{.Commit}}
+    env:
+      - CGO_ENABLED=1
+  - id: other
+    main: ./cmd/gh-slack
+    goos:
+      - linux
+      - windows
+    goarch:
+      - amd64
     ldflags:
       - -X github.com/rneatherway/gh-slack/internal/version.version={{.Version}}
       - -X github.com/rneatherway/gh-slack/internal/version.commit={{.Commit}}
@@ -16,4 +27,3 @@ builds:
 archives:
   - format: binary
     name_template: "slack-{{.Os}}-{{.Arch}}"
-
