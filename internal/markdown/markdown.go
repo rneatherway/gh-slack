@@ -12,6 +12,7 @@ import (
 )
 
 var userRE = regexp.MustCompile("<@[A-Z0-9]+>")
+var linkRE = regexp.MustCompile(`<(https?://[^|>]+)\|([^>]+)>`)
 
 type UserProvider interface {
 	UsernameForID(string) (string, error)
@@ -60,6 +61,22 @@ func parseUnixTimestamp(s string) (*time.Time, error) {
 	return &result, nil
 }
 
+func convert(client UserProvider, b *strings.Builder, s string) error {
+	text, err := interpolateUsers(client, s)
+	if err != nil {
+		return err
+	}
+
+	text = linkRE.ReplaceAllString(text, "[$2]($1)")
+
+	for _, line := range strings.Split(text, "\n") {
+		// TODO: Might be a good idea to escape 'line'
+		fmt.Fprintf(b, "> %s\n", line)
+	}
+
+	return nil
+}
+
 func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryResponse) (string, error) {
 	b := &strings.Builder{}
 	messages := history.Messages
@@ -101,21 +118,17 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 			msgTimes[message.Ts].Format("2006-01-02 15:04"))
 
 		if message.Text != "" {
-			text, err := interpolateUsers(client, message.Text)
+			err = convert(client, b, message.Text)
 			if err != nil {
 				return "", err
-			}
-
-			for _, line := range strings.Split(text, "\n") {
-				// TODO: Might be a good idea to escape 'line'
-				fmt.Fprintf(b, "> %s\n", line)
 			}
 		}
 
 		// These seem to be mostly bot messages so far. Perhaps we should just skip them?
 		for _, a := range message.Attachments {
-			for _, line := range strings.Split(a.Text, "\n") {
-				fmt.Fprintf(b, "> %s\n", line)
+			err = convert(client, b, a.Text)
+			if err != nil {
+				return "", err
 			}
 		}
 
