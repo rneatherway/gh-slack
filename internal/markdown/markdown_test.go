@@ -46,3 +46,20 @@ func TestInterpolateUsers(t *testing.T) {
 		}
 	}
 }
+
+func TestLinkify(t *testing.T) {
+	table := [][]string{
+		{"Hello <https://example.com|text> end", "Hello [text](https://example.com) end"},
+		{"Hello <https://example.com|text> end and here is another link <http://github.com|GitHub!!> go check it out", "Hello [text](https://example.com) end and here is another link [GitHub!!](http://github.com) go check it out"},
+	}
+
+	for _, test := range table {
+		input := test[0]
+		expected := test[1]
+		actual := linkRE.ReplaceAllString(input, "[$2]($1)")
+
+		if actual != expected {
+			t.Errorf("expected %q, actual %q", expected, actual)
+		}
+	}
+}
