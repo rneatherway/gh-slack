@@ -12,7 +12,7 @@ This project provides a means of archiving a Slack conversation or thread as mar
 
 ```
 Usage:
-  gh-slack [OPTIONS] [Start]
+  gh slack [OPTIONS] [Start]
 
 Application Options:
   -l, --limit=   Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched) (default: 20)
