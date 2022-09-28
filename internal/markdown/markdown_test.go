@@ -63,3 +63,20 @@ func TestLinkify(t *testing.T) {
 		}
 	}
 }
+
+func TestFixCodefence(t *testing.T) {
+	table := [][]string{
+		{"```{\n  x: y,\n  a: b\n}```", "```\n{\n  x: y,\n  a: b\n}\n```"},
+	}
+
+	for _, test := range table {
+		input := test[0]
+		expected := test[1]
+		actual := openCodefence.ReplaceAllLiteralString(input, "```\n")
+		actual = closeCodefence.ReplaceAllString(actual, "$1\n```")
+
+		if actual != expected {
+			t.Errorf("expected %q, actual %q", expected, actual)
+		}
+	}
+}

@@ -13,6 +13,8 @@ import (
 
 var userRE = regexp.MustCompile("<@[A-Z0-9]+>")
 var linkRE = regexp.MustCompile(`<(https?://[^|>]+)\|([^>]+)>`)
+var openCodefence = regexp.MustCompile("(?m)^```")
+var closeCodefence = regexp.MustCompile("(?m)(.)```$")
 
 type UserProvider interface {
 	UsernameForID(string) (string, error)
@@ -68,6 +70,8 @@ func convert(client UserProvider, b *strings.Builder, s string) error {
 	}
 
 	text = linkRE.ReplaceAllString(text, "[$2]($1)")
+	text = openCodefence.ReplaceAllString(text, "```\n")
+	text = closeCodefence.ReplaceAllString(text, "$1\n```")
 
 	for _, line := range strings.Split(text, "\n") {
 		// TODO: Might be a good idea to escape 'line'
