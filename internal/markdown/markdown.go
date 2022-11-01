@@ -142,6 +142,7 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 	return b.String(), nil
 }
 
-func WrapInDetails(s string) string {
-	return fmt.Sprintf("<details>\n  <summary>Click to expand</summary>\n\n%s\n</details>", s)
+func WrapInDetails(channelName, link, s string) string {
+	return fmt.Sprintf("Slack conversation archive of [`#%s`](%s)\n\n<details>\n  <summary>Click to expand</summary>\n\n%s\n</details>",
+		channelName, link, s)
 }

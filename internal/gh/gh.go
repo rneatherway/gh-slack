@@ -5,30 +5,29 @@ import (
 	"os"
 
 	"github.com/cli/go-gh"
-	"github.com/rneatherway/gh-slack/internal/slackclient"
 )
 
-func NewIssue(repoUrl string, channel *slackclient.Channel, content string) error {
+func NewIssue(repoUrl string, channelName, content string) error {
 	out, _, err := gh.Exec(
 		"issue",
 		"-R",
 		repoUrl,
 		"create",
 		"--title",
-		fmt.Sprintf("Slack conversation archive of `#%s`", channel.Name),
+		fmt.Sprintf("Slack conversation archive of `#%s`", channelName),
 		"--body",
 		content)
 	os.Stdout.Write(out.Bytes())
 	return err
 }
 
-func AddComment(issueUrl string, channel *slackclient.Channel, content string) error {
+func AddComment(issueUrl string, content string) error {
 	out, _, err := gh.Exec(
 		"issue",
 		"comment",
 		issueUrl,
 		"--body",
-		fmt.Sprintf("Slack conversation archive of `#%s`\n%s", channel.Name, content))
+		content)
 	os.Stdout.Write(out.Bytes())
 	return err
 }
