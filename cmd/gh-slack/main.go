@@ -103,22 +103,35 @@ func realMain() error {
 		return err
 	}
 
+	var channelName string
 	if opts.Details {
-		output = markdown.WrapInDetails(output)
+		channelInfo, err := client.ChannelInfo(channelID)
+		if err != nil {
+			return err
+		}
+
+		channelName = channelInfo.Name
+		output = markdown.WrapInDetails(channelName, opts.Args.Start, output)
 	}
 
 	if repoUrl != "" {
-		channelInfo, err := client.ChannelInfo(channelID)
+		if channelName == "" {
+			channelInfo, err := client.ChannelInfo(channelID)
+			if err != nil {
+				return err
+			}
+			channelName = channelInfo.Name
+		}
+
+		err := gh.NewIssue(repoUrl, channelName, output)
 		if err != nil {
 			return err
 		}
-		gh.NewIssue(repoUrl, channelInfo, output)
 	} else if issueUrl != "" {
-		channelInfo, err := client.ChannelInfo(channelID)
+		err := gh.AddComment(issueUrl, output)
 		if err != nil {
 			return err
 		}
-		gh.AddComment(issueUrl, channelInfo, output)
 	} else {
 		os.Stdout.WriteString(output)
 	}
