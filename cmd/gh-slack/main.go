@@ -43,6 +43,7 @@ var opts struct {
 	Version bool   `long:"version" description:"Output version information"`
 	Details bool   `short:"d" long:"details" description:"Wrap the markdown output in HTML <details> tags"`
 	Issue   string `short:"i" long:"issue" description:"The URL of a repository to post the output as a new issue, or the URL of an issue to add a comment to that issue"`
+	Team    string `short:"t" long:"team" description:"The slack team name of the workspace you want to use"`
 }
 
 func realMain() error {
@@ -86,8 +87,16 @@ func realMain() error {
 		logger = log.Default()
 	}
 
+	var team string
+
+	if opts.Team == "" {
+		return errors.New("the required argument `Team` was not provided")
+	} else {
+		team = opts.Team
+	}
+
 	client, err := slackclient.New(
-		"github", // This could be made configurable at some point
+		team,
 		logger)
 	if err != nil {
 		return err
