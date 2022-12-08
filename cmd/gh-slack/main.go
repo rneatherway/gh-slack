@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/rneatherway/gh-slack/internal/gh"
 	"github.com/rneatherway/gh-slack/internal/markdown"
@@ -15,6 +16,8 @@ import (
 	"github.com/rneatherway/gh-slack/internal/version"
 
 	"github.com/jessevdk/go-flags"
+
+	github "github.com/cli/go-gh"
 )
 
 var (
@@ -90,7 +93,10 @@ func realMain() error {
 	var team string
 
 	if opts.Team == "" {
-		return errors.New("the required argument `Team` was not provided")
+		team, _, err = getSlackTeam()
+		if err != nil {
+			return errors.New("No team set. Either pass -t/--team or run `gh config set extensions.slack.team team`.")
+		}
 	} else {
 		team = opts.Team
 	}
@@ -154,4 +160,13 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func getSlackTeam() (string, string, error) {
+	out, stderr, err := github.Exec(
+		"config",
+		"get",
+		"extensions.slack.team",
+	)
+	return strings.TrimRight(string(out.Bytes()), "\n"), string(stderr.Bytes()), err
 }
