@@ -18,20 +18,30 @@ import (
 )
 
 var (
-	permalinkRE = regexp.MustCompile("https://[^./]+.slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
+	permalinkRE = regexp.MustCompile("https://([^./]+).slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
 	nwoRE       = regexp.MustCompile("^/[^/]+/[^/]+/?$")
 	issueRE     = regexp.MustCompile("^/[^/]+/[^/]+/issues/[0-9]+/?$")
 )
 
+type linkParts struct {
+	team      string
+	channelID string
+	timestamp string
+}
+
 // https://github.slack.com/archives/CP9GMKJCE/p1648028606962719
-// returns (CP9GMKJCE, 1648028606.962719, nil)
-func parsePermalink(link string) (string, string, error) {
+// returns (github, CP9GMKJCE, 1648028606.962719, nil)
+func parsePermalink(link string) (linkParts, error) {
 	result := permalinkRE.FindStringSubmatch(link)
 	if result == nil {
-		return "", "", fmt.Errorf("not a permalink: %q", link)
+		return linkParts{}, fmt.Errorf("not a permalink: %q", link)
 	}
 
-	return result[1], result[2] + "." + result[3], nil
+	return linkParts{
+		team:      result[1],
+		channelID: result[2],
+		timestamp: result[3] + "." + result[4],
+	}, nil
 }
 
 var opts struct {
@@ -76,7 +86,7 @@ func realMain() error {
 		}
 	}
 
-	channelID, timestamp, err := parsePermalink(opts.Args.Start)
+	linkParts, err := parsePermalink(opts.Args.Start)
 	if err != nil {
 		return err
 	}
@@ -87,13 +97,13 @@ func realMain() error {
 	}
 
 	client, err := slackclient.New(
-		"github", // This could be made configurable at some point
+		linkParts.team,
 		logger)
 	if err != nil {
 		return err
 	}
 
-	history, err := client.History(channelID, timestamp, opts.Limit)
+	history, err := client.History(linkParts.channelID, linkParts.timestamp, opts.Limit)
 	if err != nil {
 		return err
 	}
@@ -105,7 +115,7 @@ func realMain() error {
 
 	var channelName string
 	if opts.Details {
-		channelInfo, err := client.ChannelInfo(channelID)
+		channelInfo, err := client.ChannelInfo(linkParts.channelID)
 		if err != nil {
 			return err
 		}
@@ -116,7 +126,7 @@ func realMain() error {
 
 	if repoUrl != "" {
 		if channelName == "" {
-			channelInfo, err := client.ChannelInfo(channelID)
+			channelInfo, err := client.ChannelInfo(linkParts.channelID)
 			if err != nil {
 				return err
 			}
