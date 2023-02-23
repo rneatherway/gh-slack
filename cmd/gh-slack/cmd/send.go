@@ -39,6 +39,7 @@ var sendCmd = &cobra.Command{
 // sendMessage sends a message to a Slack channel.
 func sendMessage(team, channelID, message string, logger *log.Logger) error {
 	client, err := slackclient.New(team, logger)
+	defer client.Close()
 	if err != nil {
 		return err
 	}
