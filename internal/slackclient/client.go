@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"nhooyr.io/websocket"
 )
 
 type Cursor struct {
@@ -119,6 +121,7 @@ type SlackClient struct {
 	auth      *SlackAuth
 	cache     Cache
 	log       *log.Logger
+	ws_conn   *websocket.Conn
 }
 
 func New(team string, log *log.Logger) (*SlackClient, error) {
