@@ -534,3 +534,23 @@ func (c *SlackClient) SendMessage(channelID string, message string) (*SendMessag
 
 	return response, nil
 }
+
+// TODO: Stub implementation of listening for messages
+func (c *SlackClient) ListenForMessages() error {
+	fmt.Println("=== Reading from websocket connection... ===")
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	for i := 0; i < 5; i++ {
+		ws_message := &RTMEvent{}
+		err := wsjson.Read(ctx, c.ws_conn, ws_message)
+		if err != nil {
+			c.ws_conn.Close(websocket.StatusUnsupportedData, "")
+			return err
+		}
+		fmt.Println("=== Received ===")
+		fmt.Println(ws_message)
+	}
+	fmt.Println("=== Done Reading ===")
+	return nil
+}
