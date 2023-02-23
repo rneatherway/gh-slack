@@ -151,6 +151,14 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	return c, err
 }
 
+func (c *SlackClient) Close() {
+	// If c.ws_conn is nil, we never established a websocket connection, so there's nothing to close.
+	if c.ws_conn == nil {
+		return
+	}
+	c.ws_conn.Close(websocket.StatusNormalClosure, "")
+}
+
 func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
 	u, err := url.Parse(fmt.Sprintf("https://%s.slack.com/api/", c.team))
 	if err != nil {
