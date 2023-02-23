@@ -113,13 +113,11 @@ func readSlack(args []string) error {
 		logger = log.Default()
 	}
 
-	client, err := slackclient.New(
-		linkParts.team,
-		logger)
-	defer client.Close()
+	client, err := slackclient.New(linkParts.team, logger)
 	if err != nil {
 		return err
 	}
+	defer client.Close()
 
 	history, err := client.History(linkParts.channelID, linkParts.timestamp, opts.Limit)
 	if err != nil {
