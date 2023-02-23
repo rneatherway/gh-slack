@@ -116,6 +116,7 @@ func readSlack(args []string) error {
 	client, err := slackclient.New(
 		linkParts.team,
 		logger)
+	defer client.Close()
 	if err != nil {
 		return err
 	}
