@@ -28,6 +28,20 @@ var sendCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if message == "" {
+			fi, err := os.Stdin.Stat()
+			if err != nil {
+				return fmt.Errorf("unexpected error when reading from stdin: %w", err)
+			}
+			if fi.Size() == 0 {
+				return fmt.Errorf("no message provided and no data read from stdin")
+			}
+			data, err := io.ReadAll(os.Stdin)
+			if err != nil {
+				return fmt.Errorf("no message provided and failed to read from stdin: %w", err)
+			}
+			message = string(data)
+		}
 		logger := log.New(io.Discard, "", log.LstdFlags)
 		if verbose {
 			logger = log.Default()
@@ -62,11 +76,10 @@ func sendMessage(team, channelID, message, bot string, logger *log.Logger) error
 }
 
 func init() {
-	sendCmd.Flags().StringP("channel", "c", "", "Channel ID to send the message to (required)")
-	sendCmd.Flags().StringP("message", "m", "", "Message to send (required)")
-	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required)")
-	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to listen to for message responses")
-	sendCmd.MarkFlagRequired("message")
+	sendCmd.Flags().StringP("channel", "c", "", "Channel ID to send the message to (required). Can also be provided through .gh-slack.yaml config file.")
+	sendCmd.Flags().StringP("message", "m", "", "Message to send (required). Can also be provided through the stdin.")
+	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required). Can also be provided through .gh-slack.yaml config file.")
+	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to listen to for message responses. Can also be provided through .gh-slack.yaml config file.")
 	sendCmd.SetUsageTemplate(sendCmdUsage)
 	sendCmd.SetHelpTemplate(sendCmdUsage)
 
