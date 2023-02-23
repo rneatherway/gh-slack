@@ -53,6 +53,14 @@ type SendMessageResponse struct {
 	Message Message `json:"message,omitempty"`
 }
 
+type RTMEvent struct {
+	Type    string `json:"type"`
+	Channel string `json:"channel,omitempty"`
+	User    string `json:"user,omitempty"`
+	Text    string `json:"text,omitempty"`
+	TS      string `json:"ts,omitempty"`
+}
+
 func (r *SendMessageResponse) Output(team, channelID string) string {
 	if !r.OK {
 		return fmt.Sprintf("Error: %s", r.Error)
