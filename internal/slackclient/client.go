@@ -53,6 +53,11 @@ type SendMessageResponse struct {
 	Message Message `json:"message,omitempty"`
 }
 
+type RTMConnectResponse struct {
+	Ok  bool   `json:"ok"`
+	URL string `json:"url"`
+}
+
 type RTMEvent struct {
 	Type    string `json:"type"`
 	Channel string `json:"channel,omitempty"`
