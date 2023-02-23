@@ -8,6 +8,7 @@ import (
 
 	"github.com/rneatherway/gh-slack/internal/slackclient"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var sendCmd = &cobra.Command{
@@ -15,15 +16,15 @@ var sendCmd = &cobra.Command{
 	Short: "Sends a message to a Slack channel",
 	Long:  `Sends a message to a Slack channel.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		channelID, err := cmd.Flags().GetString("channel")
-		if err != nil {
-			return err
+		channelID := viper.GetString("slack.channel")
+		if channelID == "" {
+			return fmt.Errorf("required flag \"channel\" not set")
+		}
+		team := viper.GetString("slack.team")
+		if team == "" {
+			return fmt.Errorf("required flag \"team\" not set")
 		}
 		message, err := cmd.Flags().GetString("message")
-		if err != nil {
-			return err
-		}
-		team, err := cmd.Flags().GetString("team")
 		if err != nil {
 			return err
 		}
@@ -31,10 +32,7 @@ var sendCmd = &cobra.Command{
 		if verbose {
 			logger = log.Default()
 		}
-		bot, err := cmd.Flags().GetString("bot")
-		if err != nil {
-			return err
-		}
+		bot := viper.GetString("slack.bot")
 		return sendMessage(team, channelID, message, bot, logger)
 	},
 	Example: `  gh-slack send -t <team-name> -c <channel-id> -m <message>`,
@@ -67,13 +65,26 @@ func init() {
 	sendCmd.Flags().StringP("channel", "c", "", "Channel ID to send the message to (required)")
 	sendCmd.Flags().StringP("message", "m", "", "Message to send (required)")
 	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required)")
-	sendCmd.MarkFlagRequired("channel")
-	sendCmd.MarkFlagRequired("message")
-	sendCmd.MarkFlagRequired("team")
 	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to listen to for message responses")
-	sendCmd.MarkFlagsRequiredTogether("channel", "message", "team")
+	sendCmd.MarkFlagRequired("message")
 	sendCmd.SetUsageTemplate(sendCmdUsage)
 	sendCmd.SetHelpTemplate(sendCmdUsage)
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal(err)
+	}
+	viper.AddConfigPath(home)
+	viper.AddConfigPath(".")
+	viper.SetConfigType("yaml")
+	viper.SetConfigFile(".gh-slack.yaml")
+	err = viper.ReadInConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+	viper.BindPFlag("slack.channel", sendCmd.Flags().Lookup("channel"))
+	viper.BindPFlag("slack.team", sendCmd.Flags().Lookup("team"))
+	viper.BindPFlag("slack.bot", sendCmd.Flags().Lookup("bot"))
 }
 
 const sendCmdUsage string = `Usage:{{if .Runnable}}
