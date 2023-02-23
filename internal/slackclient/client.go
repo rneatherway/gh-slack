@@ -2,6 +2,7 @@ package slackclient
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"nhooyr.io/websocket"
+	"nhooyr.io/websocket/wsjson"
 )
 
 type Cursor struct {
@@ -148,6 +150,41 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	}
 
 	err = c.loadCache()
+	if err != nil {
+		return nil, err
+	}
+	response, err := c.get("rtm.connect",
+		map[string]string{})
+	if err != nil {
+		// The call to rtm.connect failed, so we can't establish a websocket connection.
+		// TODO: If we're attempting to execute a Send subcommand, throw an error and exit
+		// since we won't be able to receive responses to messages we send.
+		return c, err
+	}
+	connect_response := &RTMConnectResponse{}
+	err = json.Unmarshal(response, connect_response)
+	if err != nil {
+		// We were unable to unmarshal the response from rtm.connect, so we can't establish a websocket connection.
+		// TODO: If we're attempting to execute a Send subcommand, throw an error and exit
+		// since we won't be able to receive responses to messages we send.
+		return c, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	socket_connection, _, err := websocket.Dial(ctx, connect_response.URL, &websocket.DialOptions{})
+	if err != nil {
+		// We were unable to establish a websocket connection.
+		// TODO: If we're attempting to execute a Send subcommand, throw an error and exit
+		// since we won't be able to receive responses to messages we send.
+		return c, err
+	}
+	c.ws_conn = socket_connection
+	// TODO: We should consider saving connect_response.URL to the cache:
+	// 1. rtm.connect is a Tier 1 Slack API, which means we're allowed about 1 call per minute. Short bursts are tolerated, but discouraged.
+	// 2. If we save connect_response.URL to the cache, we can avoid calling rtm.connect on every invocation of gh-slack.
+	// We'll then need to add additional logic here to "Dial" the cached wss URL, and if it fails, only then call rtm.connect.
+	// If we do this, we'll also need to remove calls to "c.ws_conn.Close" _unless_ there is an error. This way we keep the connection alive.
 	return c, err
 }
 
