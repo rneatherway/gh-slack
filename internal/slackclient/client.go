@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/cli/go-gh/pkg/markdown"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )
@@ -63,11 +64,20 @@ type RTMConnectResponse struct {
 }
 
 type RTMEvent struct {
-	Type    string `json:"type"`
-	Channel string `json:"channel,omitempty"`
-	User    string `json:"user,omitempty"`
-	Text    string `json:"text,omitempty"`
-	TS      string `json:"ts,omitempty"`
+	Type        string       `json:"type"`
+	Channel     string       `json:"channel,omitempty"`
+	User        string       `json:"user,omitempty"`
+	Text        string       `json:"text,omitempty"`
+	TS          string       `json:"ts,omitempty"`
+	BotID       string       `json:"bot_id,omitempty"`
+	BotProfile  BotProfile   `json:"bot_profile,omitempty"`
+	Subtype     string       `json:"subtype,omitempty"`
+	Attachments []Attachment `json:"attachments,omitempty"`
+}
+
+type BotProfile struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 func (r *SendMessageResponse) Output(team, channelID string) string {
@@ -552,5 +562,31 @@ func (c *SlackClient) ListenForMessages() error {
 		fmt.Println(ws_message)
 	}
 	fmt.Println("=== Done Reading ===")
+	return nil
+}
+
+// ListenForMessagesFromBot listens for the first message from the bot in a given channel and prints its contents
+func (c *SlackClient) ListenForMessagesFromBot(channelID string, botName string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	for {
+		ws_message := &RTMEvent{}
+		err := wsjson.Read(ctx, c.ws_conn, &ws_message)
+		if err != nil {
+			c.ws_conn.Close(websocket.StatusUnsupportedData, "")
+			return err
+		}
+		if ws_message.Channel == channelID && ws_message.Type == "message" && strings.EqualFold(ws_message.BotProfile.Name, botName) {
+			for _, attachment := range ws_message.Attachments {
+				s, err := markdown.Render(attachment.Text)
+				if err != nil {
+					return err
+				}
+				fmt.Println(s)
+			}
+			break
+		}
+	}
 	return nil
 }
