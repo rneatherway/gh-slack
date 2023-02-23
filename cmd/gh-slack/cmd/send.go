@@ -35,11 +35,6 @@ var sendCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		err = sendMessage(team, channelID, message, bot, logger)
-		if err != nil {
-			return fmt.Errorf("failed to send message: %w", err)
-		}
-
 		return sendMessage(team, channelID, message, bot, logger)
 	},
 	Example: `  gh-slack send -t <team-name> -c <channel-id> -m <message>`,
