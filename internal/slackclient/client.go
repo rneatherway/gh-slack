@@ -112,6 +112,16 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	return c, err
 }
 
+func (c *SlackClient) UsernameForMessage(message Message) (string, error) {
+	if message.User != "" {
+		return c.UsernameForID(message.User)
+	}
+	if message.BotID != "" {
+		return fmt.Sprintf("bot %s", message.BotID), nil
+	}
+	return "ghost", nil
+}
+
 func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
 	u, err := url.Parse(fmt.Sprintf("https://%s.slack.com/api/", c.team))
 	if err != nil {

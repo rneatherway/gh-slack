@@ -103,16 +103,7 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 	})
 
 	for _, message := range messages {
-		var username string
-		var err error
-
-		if message.User != "" {
-			username, err = client.UsernameForID(message.User)
-		} else if message.BotID != "" {
-			username = fmt.Sprintf("bot %s", message.BotID)
-		} else {
-			username = "ghost"
-		}
+		username, err := client.UsernameForMessage(message)
 		if err != nil {
 			return "", err
 		}
