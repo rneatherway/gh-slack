@@ -18,8 +18,8 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 		t.Fatal(err)
 	}
 	messages := []slackclient.Message{
-		{Text: "hello", User: "82317", BotID: "bot123", Ts: "123.456"},
-		{Text: "second message", User: "82317", BotID: "bot123", Ts: "124.567"},
+		{Text: "hello", User: "82317", BotID: "", Ts: "123.456"},
+		{Text: "second message", User: "82317", BotID: "", Ts: "124.567"},
 	}
 	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
 	mocks.MockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
@@ -37,6 +37,32 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 	}
 }
 
+func TestFromMessagesCombinesAdjacentMessagesFromSameBot(t *testing.T) {
+	httpclient.Client = &mocks.MockClient{}
+	mocks.MockSuccessfulAuthResponse()
+	client, err := slackclient.New("test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	messages := []slackclient.Message{
+		{Text: "hello", User: "", BotID: "bot123", Ts: "123.456"},
+		{Text: "second message", User: "", BotID: "bot123", Ts: "124.567"},
+	}
+	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
+	actual, err := FromMessages(client, history)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := `> **bot bot123** at 1969-12-31 18:02
+>
+> hello
+>
+> second message`
+	if expected != strings.TrimSpace(actual) {
+		t.Fatal("expected:\n\n", expected, "\n\ngot:\n\n", actual)
+	}
+}
+
 func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) {
 	httpclient.Client = &mocks.MockClient{}
 	mocks.MockSuccessfulAuthResponse()
@@ -45,9 +71,9 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) 
 		t.Fatal(err)
 	}
 	messages := []slackclient.Message{
-		{Text: "first!", User: "82317", BotID: "bot123", Ts: "123.456"},
-		{Text: "Message the Second", User: "1234", BotID: "bot123", Ts: "124.567"},
-		{Text: "third message", User: "82317", BotID: "bot123", Ts: "125.678"},
+		{Text: "first!", User: "82317", BotID: "", Ts: "123.456"},
+		{Text: "Message the Second", User: "1234", BotID: "", Ts: "124.567"},
+		{Text: "third message", User: "82317", BotID: "", Ts: "125.678"},
 	}
 	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
 	mocks.MockSuccessfulUsersResponse([]slackclient.User{
