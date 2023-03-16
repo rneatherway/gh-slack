@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/rneatherway/gh-slack/internal/httpclient"
 	_ "modernc.org/sqlite"
 )
 
@@ -106,7 +107,7 @@ func getSlackAuth(team string) (*SlackAuth, error) {
 
 	r.AddCookie(&http.Cookie{Name: "d", Value: cookie})
 
-	resp, err := http.DefaultClient.Do(r)
+	resp, err := httpclient.Client.Do(r)
 	if err != nil {
 		return nil, err
 	}

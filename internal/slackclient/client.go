@@ -12,6 +12,8 @@ import (
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/rneatherway/gh-slack/internal/httpclient"
 )
 
 type Cursor struct {
@@ -78,7 +80,6 @@ type Cache struct {
 type SlackClient struct {
 	cachePath string
 	team      string
-	client    http.Client
 	auth      *SlackAuth
 	cache     Cache
 	log       *log.Logger
@@ -134,7 +135,7 @@ func (c *SlackClient) get(path string, params map[string]string) ([]byte, error)
 			req.AddCookie(&http.Cookie{Name: key, Value: c.auth.Cookies[key]})
 		}
 
-		resp, err := c.client.Do(req)
+		resp, err := httpclient.Client.Do(req)
 		if err != nil {
 			return nil, err
 		}
