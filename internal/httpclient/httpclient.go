@@ -2,7 +2,6 @@ package httpclient
 
 import (
 	"net/http"
-	"net/url"
 )
 
 // See https://www.thegreatcodeadventure.com/mocking-http-requests-in-golang/
@@ -17,4 +16,3 @@ var (
 func init() {
 	Client = &http.Client{}
 }
-
