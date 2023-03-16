@@ -1,9 +1,85 @@
 package markdown
 
 import (
+	"bytes"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"strings"
 	"testing"
+
+	"github.com/rneatherway/gh-slack/internal/httpclient"
+	"github.com/rneatherway/gh-slack/internal/mocks"
+	"github.com/rneatherway/gh-slack/internal/slackclient"
 )
+
+func mockSuccessfulAuthResponse() {
+	mocks.GetDoFunc = func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{"api_token":"8675309"}`))),
+		}, nil
+	}
+}
+
+func mockSuccessfulUsersResponse(fakeUsers []slackclient.User) {
+	json := `{"Ok":true,"Members":[`
+	for i, user := range fakeUsers {
+		json += fmt.Sprintf(`{"ID":"%s","Name":"%s"}`, user.ID, user.Name)
+		if i < len(fakeUsers)-1 {
+			json += ","
+		}
+	}
+	json += `]}`
+	fmt.Println("JSON:", json)
+	mocks.GetDoFunc = func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: 200,
+			Body:       ioutil.NopCloser(bytes.NewReader([]byte(json))),
+		}, nil
+	}
+}
+
+func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
+	httpclient.Client = &mocks.MockClient{}
+	mockSuccessfulAuthResponse()
+	client, err := slackclient.New("test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	message1 := slackclient.Message{
+		Text:  "hello",
+		User:  "82317",
+		BotID: "bot123",
+		Ts:    "123.456",
+	}
+	message2 := slackclient.Message{
+		Text:  "second message",
+		User:  "82317",
+		BotID: "bot123",
+		Ts:    "124.567",
+	}
+	messages := []slackclient.Message{message1, message2}
+	history := &slackclient.HistoryResponse{
+		Ok:       true,
+		HasMore:  false,
+		Messages: messages,
+	}
+
+	mockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
+	actual, err := FromMessages(client, history)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := `> **cheshire137** at 1969-12-31 18:02
+>
+> hello
+>
+> second message`
+	if expected != strings.TrimSpace(actual) {
+		t.Fatal("expected:\n\n", expected, "\n\ngot:\n\n", actual)
+	}
+}
 
 func TestUserRE(t *testing.T) {
 	results := userRE.FindAllStringIndex("<@UP7UAV3NH> <@UPA5ANVNJ> hello", -1)
