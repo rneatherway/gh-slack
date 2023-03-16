@@ -1,10 +1,7 @@
 package markdown
 
 import (
-	"bytes"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
 	"testing"
 
@@ -13,36 +10,9 @@ import (
 	"github.com/rneatherway/gh-slack/internal/slackclient"
 )
 
-func mockSuccessfulAuthResponse() {
-	mocks.GetDoFunc = func(*http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{"api_token":"8675309"}`))),
-		}, nil
-	}
-}
-
-func mockSuccessfulUsersResponse(fakeUsers []slackclient.User) {
-	json := `{"Ok":true,"Members":[`
-	for i, user := range fakeUsers {
-		json += fmt.Sprintf(`{"ID":"%s","Name":"%s"}`, user.ID, user.Name)
-		if i < len(fakeUsers)-1 {
-			json += ","
-		}
-	}
-	json += `]}`
-	fmt.Println("JSON:", json)
-	mocks.GetDoFunc = func(*http.Request) (*http.Response, error) {
-		return &http.Response{
-			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(json))),
-		}, nil
-	}
-}
-
 func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 	httpclient.Client = &mocks.MockClient{}
-	mockSuccessfulAuthResponse()
+	mocks.MockSuccessfulAuthResponse()
 	client, err := slackclient.New("test", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -52,7 +22,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 		{Text: "second message", User: "82317", BotID: "bot123", Ts: "124.567"},
 	}
 	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
-	mockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
+	mocks.MockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
 	actual, err := FromMessages(client, history)
 	if err != nil {
 		t.Fatal(err)
@@ -69,7 +39,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 
 func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) {
 	httpclient.Client = &mocks.MockClient{}
-	mockSuccessfulAuthResponse()
+	mocks.MockSuccessfulAuthResponse()
 	client, err := slackclient.New("test", nil)
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +50,7 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) 
 		{Text: "third message", User: "82317", BotID: "bot123", Ts: "125.678"},
 	}
 	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
-	mockSuccessfulUsersResponse([]slackclient.User{
+	mocks.MockSuccessfulUsersResponse([]slackclient.User{
 		{ID: "82317", Name: "cheshire137"},
 		{ID: "1234", Name: "octokatherine"},
 	})
