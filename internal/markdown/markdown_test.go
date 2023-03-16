@@ -47,25 +47,11 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	message1 := slackclient.Message{
-		Text:  "hello",
-		User:  "82317",
-		BotID: "bot123",
-		Ts:    "123.456",
+	messages := []slackclient.Message{
+		{Text: "hello", User: "82317", BotID: "bot123", Ts: "123.456"},
+		{Text: "second message", User: "82317", BotID: "bot123", Ts: "124.567"},
 	}
-	message2 := slackclient.Message{
-		Text:  "second message",
-		User:  "82317",
-		BotID: "bot123",
-		Ts:    "124.567",
-	}
-	messages := []slackclient.Message{message1, message2}
-	history := &slackclient.HistoryResponse{
-		Ok:       true,
-		HasMore:  false,
-		Messages: messages,
-	}
-
+	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
 	mockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
 	actual, err := FromMessages(client, history)
 	if err != nil {
@@ -76,6 +62,43 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 > hello
 >
 > second message`
+	if expected != strings.TrimSpace(actual) {
+		t.Fatal("expected:\n\n", expected, "\n\ngot:\n\n", actual)
+	}
+}
+
+func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) {
+	httpclient.Client = &mocks.MockClient{}
+	mockSuccessfulAuthResponse()
+	client, err := slackclient.New("test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	messages := []slackclient.Message{
+		{Text: "first!", User: "82317", BotID: "bot123", Ts: "123.456"},
+		{Text: "Message the Second", User: "1234", BotID: "bot123", Ts: "124.567"},
+		{Text: "third message", User: "82317", BotID: "bot123", Ts: "125.678"},
+	}
+	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
+	mockSuccessfulUsersResponse([]slackclient.User{
+		{ID: "82317", Name: "cheshire137"},
+		{ID: "1234", Name: "octokatherine"},
+	})
+	actual, err := FromMessages(client, history)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := `> **cheshire137** at 1969-12-31 18:02
+>
+> first!
+
+> **octokatherine** at 1969-12-31 18:02
+>
+> Message the Second
+
+> **cheshire137** at 1969-12-31 18:02
+>
+> third message`
 	if expected != strings.TrimSpace(actual) {
 		t.Fatal("expected:\n\n", expected, "\n\ngot:\n\n", actual)
 	}
