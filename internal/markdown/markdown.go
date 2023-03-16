@@ -46,7 +46,7 @@ func interpolateUsers(client UserProvider, s string) (string, error) {
 func parseUnixTimestamp(s string) (*time.Time, error) {
 	tsParts := strings.Split(s, ".")
 	if len(tsParts) != 2 {
-		return nil, fmt.Errorf("timestamp '%s' in not in <seconds>.<milliseconds> format", s)
+		return nil, fmt.Errorf("timestamp '%s' is not in <seconds>.<milliseconds> format", s)
 	}
 
 	seconds, err := strconv.ParseInt(tsParts[0], 10, 64)
