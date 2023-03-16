@@ -112,13 +112,16 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 
 		includeSpeakerHeader := lastSpeakerID == "" || message.User != lastSpeakerID
 
+		if lastSpeakerID != "" && message.User != lastSpeakerID {
+			fmt.Fprintf(b, "\n")
+		}
+
 		if includeSpeakerHeader {
-			fmt.Fprintf(b, "> **%s** at %s\n>\n",
+			fmt.Fprintf(b, "> **%s** at %s\n",
 				username,
 				msgTimes[message.Ts].Format("2006-01-02 15:04"))
-		} else {
-			fmt.Fprintf(b, ">\n")
 		}
+		fmt.Fprintf(b, ">\n")
 
 		if message.Text != "" {
 			err = convert(client, b, message.Text)
@@ -135,7 +138,7 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 			}
 		}
 
-		if includeSpeakerHeader {
+		if !includeSpeakerHeader {
 			b.WriteString("\n")
 		}
 
