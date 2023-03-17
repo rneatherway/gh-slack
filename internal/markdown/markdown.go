@@ -104,7 +104,7 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 
 	lastSpeakerID := ""
 
-	for _, message := range messages {
+	for i, message := range messages {
 		username, err := client.UsernameForMessage(message)
 		if err != nil {
 			return "", err
@@ -115,15 +115,29 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 			speakerID = message.BotID
 		}
 
-		if lastSpeakerID != "" && speakerID != lastSpeakerID {
+		messageTime := msgTimes[message.Ts]
+		messageTimeDiffInMinutes := 0
+
+		// How far apart in minutes can two messages be, by the same author, before we repeat the header line?
+		messageTimeMinuteCutoff := 60
+
+		if i > 0 {
+			prevMessage := messages[i-1]
+			prevMessageTime := msgTimes[prevMessage.Ts]
+			messageTimeDiffInMinutes = int(messageTime.Sub(prevMessageTime).Minutes())
+		}
+
+		if lastSpeakerID != "" && speakerID != lastSpeakerID || messageTimeDiffInMinutes > messageTimeMinuteCutoff {
 			fmt.Fprintf(b, "\n")
 		}
 
-		includeSpeakerHeader := lastSpeakerID == "" || speakerID != lastSpeakerID
+		includeSpeakerHeader := lastSpeakerID == "" || speakerID != lastSpeakerID ||
+			messageTimeDiffInMinutes > messageTimeMinuteCutoff
+
 		if includeSpeakerHeader {
 			fmt.Fprintf(b, "> **%s** at %s\n",
 				username,
-				msgTimes[message.Ts].Format("2006-01-02 15:04"))
+				messageTime.Format("2006-01-02 15:04"))
 		}
 		fmt.Fprintf(b, ">\n")
 
