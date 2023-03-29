@@ -11,7 +11,21 @@ import (
 
 func cookiePassword() ([]byte, error) {
 	query := keychain.NewItem()
-	query.SetSecClass(keychain.SecClassGenericPassword)
+	accountNames := []string{"Slack Key", "Slack"}
+
+	var err error
+	for _, accountName := range accountNames {
+		var password []byte
+		password, err = cookiePasswordFromKeychain(accountName)
+		if err == nil {
+			return password, nil
+		}
+	}
+
+	return []byte{}, err
+}
+
+func cookiePasswordFromKeychain(accountName string) ([]byte, error) {
 	query.SetService("Slack Safe Storage")
 	query.SetAccount("Slack Key")
 	query.SetMatchLimit(keychain.MatchLimitOne)
