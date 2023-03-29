@@ -26,6 +26,7 @@ func cookiePassword() ([]byte, error) {
 
 func cookiePasswordFromKeychain(accountName string) ([]byte, error) {
 	query := keychain.NewItem()
+	query.SetSecClass(keychain.SecClassGenericPassword)
 	query.SetService("Slack Safe Storage")
 	query.SetAccount(accountName)
 	query.SetMatchLimit(keychain.MatchLimitOne)
