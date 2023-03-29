@@ -10,7 +10,6 @@ import (
 )
 
 func cookiePassword() ([]byte, error) {
-	query := keychain.NewItem()
 	accountNames := []string{"Slack Key", "Slack"}
 
 	var err error
@@ -26,6 +25,7 @@ func cookiePassword() ([]byte, error) {
 }
 
 func cookiePasswordFromKeychain(accountName string) ([]byte, error) {
+	query := keychain.NewItem()
 	query.SetService("Slack Safe Storage")
 	query.SetAccount("Slack Key")
 	query.SetMatchLimit(keychain.MatchLimitOne)
