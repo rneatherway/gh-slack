@@ -10,7 +10,7 @@ import (
 )
 
 func cookiePassword() ([]byte, error) {
-	accountNames := []string{"Slack Key", "Slack"}
+	accountNames := []string{"Slack Key", "Slack", "Slack App Store Key"}
 
 	var err error
 	for _, accountName := range accountNames {
