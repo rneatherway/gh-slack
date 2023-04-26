@@ -7,6 +7,9 @@ This project provides a means of archiving a Slack conversation or thread as mar
 
     gh extension install https://github.com/rneatherway/gh-slack
 
+## Upgrading
+
+    gh extension upgrade gh-slack
 
 ## Usage
 
