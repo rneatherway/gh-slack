@@ -1,5 +1,7 @@
 # gh-slack
 
+[![CI](https://github.com/rneatherway/gh-slack/actions/workflows/ci.yml/badge.svg)](https://github.com/rneatherway/gh-slack/actions/workflows/ci.yml) [![Release](https://github.com/rneatherway/gh-slack/actions/workflows/release.yml/badge.svg)](https://github.com/rneatherway/gh-slack/actions/workflows/release.yml)
+
 This project provides a means of archiving a Slack conversation or thread as markdown. For convenience it is installable as a `gh` extension.
 
 ## Installation
