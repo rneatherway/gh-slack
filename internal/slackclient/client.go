@@ -112,6 +112,23 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	return c, err
 }
 
+// Null produces a SlackClient suitable for testing that does not try to load
+// the Slack token or cookies from disk, and starts with an empty cache.
+func Null(team string) (*SlackClient, error) {
+	cacheFile, err := os.CreateTemp("", "gh-slack-cache")
+	if err != nil {
+		return nil, err
+	}
+
+	return &SlackClient{
+		team: team,
+		auth: &SlackAuth{
+			Token: "null",
+		},
+		cachePath: cacheFile.Name(),
+	}, nil
+}
+
 func (c *SlackClient) UsernameForMessage(message Message) (string, error) {
 	if message.User != "" {
 		return c.UsernameForID(message.User)

@@ -13,7 +13,7 @@ import (
 func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 	httpclient.Client = &mocks.MockClient{}
 	mocks.MockSuccessfulAuthResponse()
-	client, err := slackclient.New("test", nil)
+	client, err := slackclient.Null("test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -27,7 +27,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `> **cheshire137** at 1969-12-31 18:02
+	expected := `> **cheshire137** at 1970-01-01 00:02
 >
 > hello
 >
@@ -40,7 +40,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 func TestFromMessagesCombinesAdjacentMessagesFromSameBot(t *testing.T) {
 	httpclient.Client = &mocks.MockClient{}
 	mocks.MockSuccessfulAuthResponse()
-	client, err := slackclient.New("test", nil)
+	client, err := slackclient.Null("test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,7 +53,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameBot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `> **bot bot123** at 1969-12-31 18:02
+	expected := `> **bot bot123** at 1970-01-01 00:02
 >
 > hello
 >
@@ -66,7 +66,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameBot(t *testing.T) {
 func TestFromMessagesSeparatesMessagesFromSameUserWhenFarApartInTime(t *testing.T) {
 	httpclient.Client = &mocks.MockClient{}
 	mocks.MockSuccessfulAuthResponse()
-	client, err := slackclient.New("test", nil)
+	client, err := slackclient.Null("test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,11 +80,11 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenFarApartInTime(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `> **cheshire137** at 2023-03-17 08:12
+	expected := `> **cheshire137** at 2023-03-17 13:12
 >
 > hello
 
-> **cheshire137** at 2023-03-17 09:42
+> **cheshire137** at 2023-03-17 14:42
 >
 > second message`
 	if expected != strings.TrimSpace(actual) {
@@ -95,7 +95,7 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenFarApartInTime(t *testing.
 func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) {
 	httpclient.Client = &mocks.MockClient{}
 	mocks.MockSuccessfulAuthResponse()
-	client, err := slackclient.New("test", nil)
+	client, err := slackclient.Null("test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -113,15 +113,15 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `> **cheshire137** at 1969-12-31 18:02
+	expected := `> **cheshire137** at 1970-01-01 00:02
 >
 > first!
 
-> **octokatherine** at 1969-12-31 18:02
+> **octokatherine** at 1970-01-01 00:02
 >
 > Message the Second
 
-> **cheshire137** at 1969-12-31 18:02
+> **cheshire137** at 1970-01-01 00:02
 >
 > third message`
 	if expected != strings.TrimSpace(actual) {
