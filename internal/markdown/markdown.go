@@ -137,7 +137,7 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 		if includeSpeakerHeader {
 			fmt.Fprintf(b, "> **%s** at %s\n",
 				username,
-				messageTime.UTC().Format("2006-01-02 15:04"))
+				messageTime.In(client.GetLocation()).Format("2006-01-02 15:04 MST"))
 		}
 		fmt.Fprintf(b, ">\n")
 

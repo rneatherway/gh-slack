@@ -27,7 +27,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `> **cheshire137** at 1970-01-01 00:02
+	expected := `> **cheshire137** at 1970-01-01 00:02 UTC
 >
 > hello
 >
@@ -53,7 +53,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameBot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `> **bot bot123** at 1970-01-01 00:02
+	expected := `> **bot bot123** at 1970-01-01 00:02 UTC
 >
 > hello
 >
@@ -80,11 +80,11 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenFarApartInTime(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `> **cheshire137** at 2023-03-17 13:12
+	expected := `> **cheshire137** at 2023-03-17 13:12 UTC
 >
 > hello
 
-> **cheshire137** at 2023-03-17 14:42
+> **cheshire137** at 2023-03-17 14:42 UTC
 >
 > second message`
 	if expected != strings.TrimSpace(actual) {
@@ -113,15 +113,15 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) 
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := `> **cheshire137** at 1970-01-01 00:02
+	expected := `> **cheshire137** at 1970-01-01 00:02 UTC
 >
 > first!
 
-> **octokatherine** at 1970-01-01 00:02
+> **octokatherine** at 1970-01-01 00:02 UTC
 >
 > Message the Second
 
-> **cheshire137** at 1970-01-01 00:02
+> **cheshire137** at 1970-01-01 00:02 UTC
 >
 > third message`
 	if expected != strings.TrimSpace(actual) {

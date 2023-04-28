@@ -83,6 +83,7 @@ type SlackClient struct {
 	auth      *SlackAuth
 	cache     Cache
 	log       *log.Logger
+	tz        *time.Location
 }
 
 func New(team string, log *log.Logger) (*SlackClient, error) {
@@ -106,6 +107,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 		team:      team,
 		auth:      auth,
 		log:       log,
+		tz:        time.Now().Location(),
 	}
 
 	err = c.loadCache()
@@ -126,6 +128,7 @@ func Null(team string) (*SlackClient, error) {
 			Token: "null",
 		},
 		cachePath: cacheFile.Name(),
+		tz:        time.UTC,
 	}, nil
 }
 
@@ -395,4 +398,8 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 	}
 
 	return "", fmt.Errorf("no user with id %q", id)
+}
+
+func (c *SlackClient) GetLocation() *time.Location {
+	return c.tz
 }
