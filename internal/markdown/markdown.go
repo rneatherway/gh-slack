@@ -46,7 +46,7 @@ func interpolateUsers(client UserProvider, s string) (string, error) {
 func parseUnixTimestamp(s string) (*time.Time, error) {
 	tsParts := strings.Split(s, ".")
 	if len(tsParts) != 2 {
-		return nil, fmt.Errorf("timestamp '%s' in not in <seconds>.<milliseconds> format", s)
+		return nil, fmt.Errorf("timestamp '%s' is not in <seconds>.<milliseconds> format", s)
 	}
 
 	seconds, err := strconv.ParseInt(tsParts[0], 10, 64)
@@ -102,24 +102,44 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 		return msgTimes[messages[i].Ts].Before(msgTimes[messages[j].Ts])
 	})
 
-	for _, message := range messages {
-		var username string
-		var err error
+	lastSpeakerID := ""
 
-		if message.User != "" {
-			username, err = client.UsernameForID(message.User)
-		} else if message.BotID != "" {
-			username = fmt.Sprintf("bot %s", message.BotID)
-		} else {
-			username = "ghost"
-		}
+	for i, message := range messages {
+		username, err := client.UsernameForMessage(message)
 		if err != nil {
 			return "", err
 		}
 
-		fmt.Fprintf(b, "> **%s** at %s\n>\n",
-			username,
-			msgTimes[message.Ts].Format("2006-01-02 15:04"))
+		speakerID := message.User
+		if speakerID == "" {
+			speakerID = message.BotID
+		}
+
+		messageTime := msgTimes[message.Ts]
+		messageTimeDiffInMinutes := 0
+
+		// How far apart in minutes can two messages be, by the same author, before we repeat the header line?
+		messageTimeMinuteCutoff := 60
+
+		if i > 0 {
+			prevMessage := messages[i-1]
+			prevMessageTime := msgTimes[prevMessage.Ts]
+			messageTimeDiffInMinutes = int(messageTime.Sub(prevMessageTime).Minutes())
+		}
+
+		if lastSpeakerID != "" && speakerID != lastSpeakerID || messageTimeDiffInMinutes > messageTimeMinuteCutoff {
+			fmt.Fprintf(b, "\n")
+		}
+
+		includeSpeakerHeader := lastSpeakerID == "" || speakerID != lastSpeakerID ||
+			messageTimeDiffInMinutes > messageTimeMinuteCutoff
+
+		if includeSpeakerHeader {
+			fmt.Fprintf(b, "> **%s** at %s\n",
+				username,
+				messageTime.In(client.GetLocation()).Format("2006-01-02 15:04 MST"))
+		}
+		fmt.Fprintf(b, ">\n")
 
 		if message.Text != "" {
 			err = convert(client, b, message.Text)
@@ -136,7 +156,11 @@ func FromMessages(client *slackclient.SlackClient, history *slackclient.HistoryR
 			}
 		}
 
-		b.WriteString("\n")
+		if !includeSpeakerHeader {
+			b.WriteString("\n")
+		}
+
+		lastSpeakerID = speakerID
 	}
 
 	return b.String(), nil

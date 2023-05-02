@@ -12,6 +12,8 @@ import (
 	"path"
 	"strconv"
 	"time"
+
+	"github.com/rneatherway/gh-slack/internal/httpclient"
 )
 
 type Cursor struct {
@@ -78,10 +80,10 @@ type Cache struct {
 type SlackClient struct {
 	cachePath string
 	team      string
-	client    http.Client
 	auth      *SlackAuth
 	cache     Cache
 	log       *log.Logger
+	tz        *time.Location
 }
 
 func New(team string, log *log.Logger) (*SlackClient, error) {
@@ -105,10 +107,39 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 		team:      team,
 		auth:      auth,
 		log:       log,
+		tz:        time.Now().Location(),
 	}
 
 	err = c.loadCache()
 	return c, err
+}
+
+// Null produces a SlackClient suitable for testing that does not try to load
+// the Slack token or cookies from disk, and starts with an empty cache.
+func Null(team string) (*SlackClient, error) {
+	cacheFile, err := os.CreateTemp("", "gh-slack-cache")
+	if err != nil {
+		return nil, err
+	}
+
+	return &SlackClient{
+		team: team,
+		auth: &SlackAuth{
+			Token: "null",
+		},
+		cachePath: cacheFile.Name(),
+		tz:        time.UTC,
+	}, nil
+}
+
+func (c *SlackClient) UsernameForMessage(message Message) (string, error) {
+	if message.User != "" {
+		return c.UsernameForID(message.User)
+	}
+	if message.BotID != "" {
+		return fmt.Sprintf("bot %s", message.BotID), nil
+	}
+	return "ghost", nil
 }
 
 func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
@@ -134,7 +165,7 @@ func (c *SlackClient) get(path string, params map[string]string) ([]byte, error)
 			req.AddCookie(&http.Cookie{Name: key, Value: c.auth.Cookies[key]})
 		}
 
-		resp, err := c.client.Do(req)
+		resp, err := httpclient.Client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -367,4 +398,8 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 	}
 
 	return "", fmt.Errorf("no user with id %q", id)
+}
+
+func (c *SlackClient) GetLocation() *time.Location {
+	return c.tz
 }
