@@ -20,7 +20,7 @@ import (
 var (
 	permalinkRE = regexp.MustCompile("https://([^./]+).slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
 	nwoRE       = regexp.MustCompile("^/[^/]+/[^/]+/?$")
-	issueRE     = regexp.MustCompile("^/[^/]+/[^/]+/issues/[0-9]+/?$")
+	issueRE     = regexp.MustCompile("^/[^/]+/[^/]+/(issues|pull)/[0-9]+/?$")
 )
 
 type linkParts struct {
@@ -70,17 +70,22 @@ func realMain() error {
 		return errors.New("the required argument `Start` was not provided")
 	}
 
-	var repoUrl, issueUrl string
+	var repoUrl, issueOrPrUrl, subCmd string
 	if opts.Issue != "" {
 		u, err := url.Parse(opts.Issue)
 		if err != nil {
 			return err
 		}
 
-		if nwoRE.MatchString(u.Path) {
+		matches := issueRE.FindStringSubmatch(u.Path)
+		if matches != nil {
+			issueOrPrUrl = opts.Issue
+			subCmd = "issue"
+			if matches[1] == "pull" {
+				subCmd = "pr"
+			}
+		} else if nwoRE.MatchString(u.Path) {
 			repoUrl = opts.Issue
-		} else if issueRE.MatchString(u.Path) {
-			issueUrl = opts.Issue
 		} else {
 			return fmt.Errorf("not a repository or issue URL: %q", opts.Issue)
 		}
@@ -137,8 +142,8 @@ func realMain() error {
 		if err != nil {
 			return err
 		}
-	} else if issueUrl != "" {
-		err := gh.AddComment(issueUrl, output)
+	} else if issueOrPrUrl != "" {
+		err := gh.AddComment(subCmd, issueOrPrUrl, output)
 		if err != nil {
 			return err
 		}
