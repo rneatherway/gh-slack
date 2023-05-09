@@ -72,6 +72,11 @@ type UsersResponse struct {
 	Members []User
 }
 
+type UsersInfoResponse struct {
+	Ok	bool
+	User	User
+}
+
 type Cache struct {
 	Channels map[string]string
 	Users    map[string]string
@@ -395,6 +400,20 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 
 	if id, ok := c.cache.Users[id]; ok {
 		return id, nil
+	}
+
+	body, err := c.get("users.info",
+		map[string]string{
+			"user": id})
+	if err == nil {
+		user := &UsersInfoResponse{}
+		err = json.Unmarshal(body, user)
+
+		if err == nil && user.Ok {
+			c.cache.Users[id] = user.User.Name
+			c.saveCache()
+			return user.User.Name, nil
+		}
 	}
 
 	return "", fmt.Errorf("no user with id %q", id)
