@@ -21,11 +21,11 @@ func NewIssue(repoUrl string, channelName, content string) error {
 	return err
 }
 
-func AddComment(issueUrl string, content string) error {
+func AddComment(subCmd, url, content string) error {
 	out, _, err := gh.Exec(
-		"issue",
+		subCmd,
 		"comment",
-		issueUrl,
+		url,
 		"--body",
 		content)
 	os.Stdout.Write(out.Bytes())
