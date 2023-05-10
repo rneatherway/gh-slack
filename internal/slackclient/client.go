@@ -72,6 +72,11 @@ type UsersResponse struct {
 	Members []User
 }
 
+type UsersInfoResponse struct {
+	Ok   bool
+	User User
+}
+
 type Cache struct {
 	Channels map[string]string
 	Users    map[string]string
@@ -93,7 +98,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 		if err != nil {
 			return nil, err
 		}
-		dataHome = path.Join(home, ".local", ".share")
+		dataHome = path.Join(home, ".local", "share")
 	}
 	cachePath := path.Join(dataHome, "gh-slack")
 
@@ -397,7 +402,28 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 		return id, nil
 	}
 
-	return "", fmt.Errorf("no user with id %q", id)
+	body, err := c.get("users.info", map[string]string{"user": id})
+	if err != nil {
+		return "", fmt.Errorf("no user with id %q: %w", id, err)
+	}
+
+	user := &UsersInfoResponse{}
+	err = json.Unmarshal(body, user)
+	if err != nil {
+		return "", err
+	}
+
+	if !user.Ok {
+		return "", errors.New("users.info response not OK")
+	}
+
+	c.cache.Users[id] = user.User.Name
+	err = c.saveCache()
+	if err != nil {
+		return "", err
+	}
+
+	return user.User.Name, nil
 }
 
 func (c *SlackClient) GetLocation() *time.Location {
