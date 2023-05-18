@@ -23,6 +23,8 @@ var readCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return readSlack(args)
 	},
+	Example: `  gh-slack read <slack-permalink>
+  gh-slack read -i <issue-url> <slack-permalink>`,
 }
 
 var (
@@ -57,7 +59,6 @@ var opts struct {
 		Start string
 	}
 	Limit   int
-	Verbose bool
 	Version bool
 	Details bool
 	Issue   string
@@ -65,7 +66,6 @@ var opts struct {
 
 func init() {
 	readCmd.Flags().IntVarP(&opts.Limit, "limit", "l", 20, "Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched)")
-	// readCmd.Flags().BoolVarP(&opts.Verbose, "verbose", "v", false, "Show verbose debug information")
 	readCmd.Flags().BoolVar(&opts.Version, "version", false, "Output version information")
 	readCmd.Flags().BoolVarP(&opts.Details, "details", "d", false, "Wrap the markdown output in HTML <details> tags")
 	readCmd.Flags().StringVarP(&opts.Issue, "issue", "i", "", "The URL of a repository to post the output as a new issue, or the URL of an issue to add a comment to that issue")

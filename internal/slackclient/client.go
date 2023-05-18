@@ -1,6 +1,7 @@
 package slackclient
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rneatherway/gh-slack/internal/httpclient"
@@ -36,6 +38,28 @@ type Message struct {
 	Attachments []Attachment
 	Ts          string
 	Type        string
+}
+
+type SendMessage struct {
+	ThreadTS    string       `json:"thread_ts,omitempty"`
+	Channel     string       `json:"channel"` // required
+	Text        string       `json:"text,omitempty"`
+	Attachments []Attachment `json:"attachments,omitempty"`
+}
+
+type SendMessageResponse struct {
+	OK      bool    `json:"ok"`
+	Error   string  `json:"error,omitempty"`
+	Warning string  `json:"warning,omitempty"`
+	TS      string  `json:"ts,omitempty"`
+	Message Message `json:"message,omitempty"`
+}
+
+func (r *SendMessageResponse) Output(team, channelID string) string {
+	if !r.OK {
+		return fmt.Sprintf("Error: %s", r.Error)
+	}
+	return fmt.Sprintf("Message permalink https://%s.slack.com/archives/%s/p%s", team, channelID, strings.ReplaceAll(r.TS, ".", ""))
 }
 
 type HistoryResponse struct {
@@ -171,6 +195,64 @@ func (c *SlackClient) get(path string, params map[string]string) ([]byte, error)
 		}
 
 		resp, err := httpclient.Client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.StatusCode == 429 {
+			s, err := strconv.Atoi(resp.Header["Retry-After"][0])
+			if err != nil {
+				return nil, err
+			}
+			d := time.Duration(s)
+			c.log.Printf("rate limited, waiting %ds", d)
+			time.Sleep(d * time.Second)
+		} else if resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("status code %d, headers: %q, body: %q", resp.StatusCode, resp.Header, body)
+		} else {
+			break
+		}
+	}
+
+	return body, nil
+}
+
+func (c *SlackClient) post(path string, params map[string]string, msg *SendMessage) ([]byte, error) {
+	u, err := url.Parse(fmt.Sprintf("https://%s.slack.com/api/", c.team))
+	if err != nil {
+		return nil, err
+	}
+	u.Path += path
+	q := u.Query()
+	for p := range params {
+		q.Add(p, params[p])
+	}
+	u.RawQuery = q.Encode()
+
+	var body []byte
+	messageBytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal message: %w", err)
+	}
+	reqBody := bytes.NewReader(messageBytes)
+
+	for {
+		req, err := http.NewRequest(http.MethodPost, u.String(), reqBody)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.auth.Token))
+		for key := range c.auth.Cookies {
+			req.AddCookie(&http.Cookie{Name: key, Value: c.auth.Cookies[key]})
+		}
+
+		resp, err := c.client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -428,4 +510,27 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 
 func (c *SlackClient) GetLocation() *time.Location {
 	return c.tz
+}
+
+func (c *SlackClient) SendMessage(channelID string, message string) (*SendMessageResponse, error) {
+	body, err := c.post("chat.postMessage",
+		map[string]string{}, &SendMessage{
+			Channel: channelID,
+			Text:    message,
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendMessageResponse{}
+	err = json.Unmarshal(body, response)
+	if err != nil {
+		return nil, err
+	}
+
+	if !response.OK {
+		return nil, fmt.Errorf("chat.postMessage response not OK: %s", body)
+	}
+
+	return response, nil
 }
