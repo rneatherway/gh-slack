@@ -6,39 +6,74 @@ import (
 	"log"
 	"os"
 
+	"github.com/cli/go-gh/pkg/config"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+func getFlagOrElseConfig(cfg *config.Config, flags *pflag.FlagSet, key string) (string, error) {
+	value, err := flags.GetString(key)
+	if err != nil {
+		return "", err
+	}
+
+	if value != "" {
+		return value, nil
+
+	}
+	return cfg.Get([]string{"extensions", "slack", key})
+}
 
 var sendCmd = &cobra.Command{
 	Use:   "send [flags]",
 	Short: "Sends a message to a Slack channel",
 	Long:  `Sends a message to a Slack channel.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		channelName, err := cmd.Flags().GetString("channel")
+		cfg, err := config.Read()
 		if err != nil {
 			return err
 		}
+
+		channelName, err := getFlagOrElseConfig(cfg, cmd.Flags(), "channel")
+		if err != nil {
+			return err
+		}
+
 		message, err := cmd.Flags().GetString("message")
 		if err != nil {
 			return err
 		}
-		team, err := cmd.Flags().GetString("team")
+
+		team, err := getFlagOrElseConfig(cfg, cmd.Flags(), "team")
 		if err != nil {
 			return err
 		}
-		logger := log.New(io.Discard, "", log.LstdFlags)
-		if verbose {
-			logger = log.Default()
+
+		wait, err := cmd.Flags().GetBool("wait")
+		if err != nil {
+			return err
 		}
+
 		bot, err := cmd.Flags().GetString("bot")
 		if err != nil {
 			return err
 		}
 
+		if wait && bot == "" {
+			bot, err = cfg.Get([]string{"extensions", "slack", "bot"})
+			if err != nil {
+				return err
+			}
+		}
+
+		logger := log.New(io.Discard, "", log.LstdFlags)
+		if verbose {
+			logger = log.Default()
+		}
 		return sendMessage(team, channelName, message, bot, logger)
 	},
-	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message>`,
+	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> [-b <bot-name>]]`,
 }
 
 // sendMessage sends a message to a Slack channel.
@@ -74,11 +109,10 @@ func init() {
 	sendCmd.Flags().StringP("channel", "c", "", "Channel name to send the message to (required)")
 	sendCmd.Flags().StringP("message", "m", "", "Message to send (required)")
 	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required)")
-	sendCmd.MarkFlagRequired("channel")
 	sendCmd.MarkFlagRequired("message")
-	sendCmd.MarkFlagRequired("team")
-	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to listen to for message responses")
-	sendCmd.MarkFlagsRequiredTogether("channel", "message", "team")
+	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to listen to for message responses (implies --listen))")
+	sendCmd.Flags().BoolP("wait", "w", false, "Listen for message responses")
+	sendCmd.MarkFlagsRequiredTogether("message")
 	sendCmd.SetUsageTemplate(sendCmdUsage)
 	sendCmd.SetHelpTemplate(sendCmdUsage)
 }
