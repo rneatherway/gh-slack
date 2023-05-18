@@ -31,20 +31,38 @@ var sendCmd = &cobra.Command{
 		if verbose {
 			logger = log.Default()
 		}
-		return sendMessage(team, channelID, message, logger)
+		bot, err := cmd.Flags().GetString("bot")
+		if err != nil {
+			return err
+		}
+		err = sendMessage(team, channelID, message, bot, logger)
+		if err != nil {
+			return fmt.Errorf("failed to send message: %w", err)
+		}
+
+		return sendMessage(team, channelID, message, bot, logger)
 	},
 	Example: `  gh-slack send -t <team-name> -c <channel-id> -m <message>`,
 }
 
 // sendMessage sends a message to a Slack channel.
-func sendMessage(team, channelID, message string, logger *log.Logger) error {
+func sendMessage(team, channelID, message, bot string, logger *log.Logger) error {
 	client, err := slackclient.New(team, logger)
 	if err != nil {
 		return err
 	}
+	defer client.Close()
 	resp, err := client.SendMessage(channelID, message)
 	if err != nil {
 		return err
+	}
+	// only listen to messages when bot is specified
+	// TODO: maybe we should move this to a separate function (SoC)
+	if bot != "" {
+		err = client.ListenForMessagesFromBot(channelID, bot)
+		if err != nil {
+			return fmt.Errorf("failed to listen to messages: %w", err)
+		}
 	}
 	fmt.Fprintln(os.Stdout, resp.Output(team, channelID))
 	return nil
@@ -57,6 +75,7 @@ func init() {
 	sendCmd.MarkFlagRequired("channel")
 	sendCmd.MarkFlagRequired("message")
 	sendCmd.MarkFlagRequired("team")
+	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to listen to for message responses")
 	sendCmd.MarkFlagsRequiredTogether("channel", "message", "team")
 	sendCmd.SetUsageTemplate(sendCmdUsage)
 	sendCmd.SetHelpTemplate(sendCmdUsage)
