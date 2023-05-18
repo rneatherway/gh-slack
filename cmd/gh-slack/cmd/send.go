@@ -15,7 +15,7 @@ var sendCmd = &cobra.Command{
 	Short: "Sends a message to a Slack channel",
 	Long:  `Sends a message to a Slack channel.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		channelID, err := cmd.Flags().GetString("channel")
+		channelName, err := cmd.Flags().GetString("channel")
 		if err != nil {
 			return err
 		}
@@ -35,23 +35,25 @@ var sendCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		err = sendMessage(team, channelID, message, bot, logger)
-		if err != nil {
-			return fmt.Errorf("failed to send message: %w", err)
-		}
 
-		return sendMessage(team, channelID, message, bot, logger)
+		return sendMessage(team, channelName, message, bot, logger)
 	},
-	Example: `  gh-slack send -t <team-name> -c <channel-id> -m <message>`,
+	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message>`,
 }
 
 // sendMessage sends a message to a Slack channel.
-func sendMessage(team, channelID, message, bot string, logger *log.Logger) error {
+func sendMessage(team, channelName, message, bot string, logger *log.Logger) error {
 	client, err := slackclient.New(team, logger)
 	if err != nil {
 		return err
 	}
 	defer client.Close()
+
+	channelID, err := client.ChannelIDForName(channelName)
+	if err != nil {
+		return err
+	}
+
 	resp, err := client.SendMessage(channelID, message)
 	if err != nil {
 		return err
@@ -69,7 +71,7 @@ func sendMessage(team, channelID, message, bot string, logger *log.Logger) error
 }
 
 func init() {
-	sendCmd.Flags().StringP("channel", "c", "", "Channel ID to send the message to (required)")
+	sendCmd.Flags().StringP("channel", "c", "", "Channel name to send the message to (required)")
 	sendCmd.Flags().StringP("message", "m", "", "Message to send (required)")
 	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required)")
 	sendCmd.MarkFlagRequired("channel")

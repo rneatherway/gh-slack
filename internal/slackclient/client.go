@@ -379,7 +379,9 @@ func (c *SlackClient) conversations(params map[string]string) ([]Channel, error)
 		body, err := c.get("conversations.list",
 			map[string]string{
 				"cursor":           conversations.ResponseMetadata.NextCursor,
-				"exclude_archived": "true"},
+				"exclude_archived": "true",
+				"limit":            "1000",
+			},
 		)
 		if err != nil {
 			return nil, err
@@ -532,8 +534,8 @@ func (c *SlackClient) getChannelID(name string) (string, error) {
 }
 
 func (c *SlackClient) UsernameForID(id string) (string, error) {
-	if id, ok := c.cache.Users[id]; ok {
-		return id, nil
+	if name, ok := c.cache.Users[id]; ok {
+		return name, nil
 	}
 
 	ur, err := c.users(nil)
@@ -551,8 +553,8 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 		return "", err
 	}
 
-	if id, ok := c.cache.Users[id]; ok {
-		return id, nil
+	if name, ok := c.cache.Users[id]; ok {
+		return name, nil
 	}
 
 	body, err := c.get("users.info", map[string]string{"user": id})
@@ -577,6 +579,37 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 	}
 
 	return user.User.Name, nil
+}
+
+func (c *SlackClient) ChannelIDForName(name string) (string, error) {
+	if id, ok := c.cache.Channels[name]; ok {
+		return id, nil
+	}
+
+	channels, err := c.conversations(nil)
+	if err != nil {
+		return "", err
+	}
+
+	c.cache.Channels = make(map[string]string)
+	for _, ch := range channels {
+		if !ch.Is_Channel {
+			fmt.Fprintf(os.Stderr, "Skipping non-channel %q\n", ch.Name)
+			continue
+		}
+		c.cache.Channels[ch.Name] = ch.ID
+	}
+
+	err = c.saveCache()
+	if err != nil {
+		return "", err
+	}
+
+	if id, ok := c.cache.Users[name]; ok {
+		return id, nil
+	}
+
+	return "", fmt.Errorf("could not find any channel with name %q", name)
 }
 
 func (c *SlackClient) GetLocation() *time.Location {
