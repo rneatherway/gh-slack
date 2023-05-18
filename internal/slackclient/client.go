@@ -252,7 +252,7 @@ func (c *SlackClient) post(path string, params map[string]string, msg *SendMessa
 			req.AddCookie(&http.Cookie{Name: key, Value: c.auth.Cookies[key]})
 		}
 
-		resp, err := c.client.Do(req)
+		resp, err := httpclient.Client.Do(req)
 		if err != nil {
 			return nil, err
 		}
