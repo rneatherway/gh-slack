@@ -122,7 +122,6 @@ func readSlack(args []string) error {
 	if err != nil {
 		return err
 	}
-	defer client.Close()
 
 	history, err := client.History(linkParts.channelID, linkParts.timestamp, opts.Limit)
 	if err != nil {

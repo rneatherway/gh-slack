@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 
 	"github.com/cli/go-gh/pkg/config"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
@@ -40,12 +39,12 @@ var sendCmd = &cobra.Command{
 			return err
 		}
 
-		message, err := cmd.Flags().GetString("message")
+		team, err := getFlagOrElseConfig(cfg, cmd.Flags(), "team")
 		if err != nil {
 			return err
 		}
 
-		team, err := getFlagOrElseConfig(cfg, cmd.Flags(), "team")
+		message, err := cmd.Flags().GetString("message")
 		if err != nil {
 			return err
 		}
@@ -73,7 +72,7 @@ var sendCmd = &cobra.Command{
 		}
 		return sendMessage(team, channelName, message, bot, logger)
 	},
-	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> [-b <bot-name>]]`,
+	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> [-b <bot-name> | --wait]`,
 }
 
 // sendMessage sends a message to a Slack channel.
@@ -82,7 +81,15 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 	if err != nil {
 		return err
 	}
-	defer client.Close()
+
+	var rtmClient *slackclient.RTMClient
+	if bot != "" {
+		rtmClient, err := client.ConnectToRTM()
+		if err != nil {
+			return err
+		}
+		defer rtmClient.Close()
+	}
 
 	channelID, err := client.ChannelIDForName(channelName)
 	if err != nil {
@@ -95,10 +102,9 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 	if err != nil {
 		return err
 	}
-	// only listen to messages when bot is specified
-	// TODO: maybe we should move this to a separate function (SoC)
+
 	if bot != "" {
-		err = client.ListenForMessagesFromBot(channelID, bot)
+		err = rtmClient.ListenForMessagesFromBot(channelID, bot)
 		if err != nil {
 			return fmt.Errorf("failed to listen to messages: %w", err)
 		}
@@ -112,8 +118,8 @@ func init() {
 	sendCmd.Flags().StringP("message", "m", "", "Message to send (required)")
 	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required)")
 	sendCmd.MarkFlagRequired("message")
-	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to listen to for message responses (implies --listen))")
-	sendCmd.Flags().BoolP("wait", "w", false, "Listen for message responses")
+	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to wait for a response from (implies --wait))")
+	sendCmd.Flags().BoolP("wait", "w", false, "Wait for message responses")
 	sendCmd.MarkFlagsRequiredTogether("message")
 	sendCmd.SetUsageTemplate(sendCmdUsage)
 	sendCmd.SetHelpTemplate(sendCmdUsage)

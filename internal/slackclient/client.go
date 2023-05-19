@@ -18,9 +18,7 @@ import (
 
 	"github.com/rneatherway/gh-slack/internal/httpclient"
 
-	"github.com/cli/go-gh/pkg/markdown"
 	"nhooyr.io/websocket"
-	"nhooyr.io/websocket/wsjson"
 )
 
 type Cursor struct {
@@ -61,20 +59,9 @@ type SendMessageResponse struct {
 }
 
 type RTMConnectResponse struct {
-	Ok  bool   `json:"ok"`
-	URL string `json:"url"`
-}
-
-type RTMEvent struct {
-	Type        string       `json:"type"`
-	Channel     string       `json:"channel,omitempty"`
-	User        string       `json:"user,omitempty"`
-	Text        string       `json:"text,omitempty"`
-	TS          string       `json:"ts,omitempty"`
-	BotID       string       `json:"bot_id,omitempty"`
-	BotProfile  BotProfile   `json:"bot_profile,omitempty"`
-	Subtype     string       `json:"subtype,omitempty"`
-	Attachments []Attachment `json:"attachments,omitempty"`
+	Ok    bool   `json:"ok"`
+	Error string `json:"error"`
+	URL   string `json:"url"`
 }
 
 type BotProfile struct {
@@ -140,7 +127,6 @@ type SlackClient struct {
 	cache     Cache
 	log       *log.Logger
 	tz        *time.Location
-	wsConn    *websocket.Conn
 }
 
 func New(team string, log *log.Logger) (*SlackClient, error) {
@@ -167,43 +153,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 		tz:        time.Now().Location(),
 	}
 
-	err = c.loadCache()
-	if err != nil {
-		return nil, err
-	}
-	response, err := c.get("rtm.connect",
-		map[string]string{})
-	if err != nil {
-		// The call to rtm.connect failed, so we can't establish a websocket connection.
-		// TODO: If we're attempting to execute a Send subcommand, throw an error and exit
-		// since we won't be able to receive responses to messages we send.
-		return c, err
-	}
-	connect_response := &RTMConnectResponse{}
-	err = json.Unmarshal(response, connect_response)
-	if err != nil {
-		// We were unable to unmarshal the response from rtm.connect, so we can't establish a websocket connection.
-		// TODO: If we're attempting to execute a Send subcommand, throw an error and exit
-		// since we won't be able to receive responses to messages we send.
-		return c, err
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	socketConnection, _, err := websocket.Dial(ctx, connect_response.URL, &websocket.DialOptions{})
-	if err != nil {
-		// We were unable to establish a websocket connection.
-		// TODO: If we're attempting to execute a Send subcommand, throw an error and exit
-		// since we won't be able to receive responses to messages we send.
-		return c, err
-	}
-	c.wsConn = socketConnection
-	// TODO: We should consider saving connect_response.URL to the cache:
-	// 1. rtm.connect is a Tier 1 Slack API, which means we're allowed about 1 call per minute. Short bursts are tolerated, but discouraged.
-	// 2. If we save connect_response.URL to the cache, we can avoid calling rtm.connect on every invocation of gh-slack.
-	// We'll then need to add additional logic here to "Dial" the cached wss URL, and if it fails, only then call rtm.connect.
-	// If we do this, we'll also need to remove calls to "c.ws_conn.Close" _unless_ there is an error. This way we keep the connection alive.
-	return c, err
+	return c, c.loadCache()
 }
 
 // Null produces a SlackClient suitable for testing that does not try to load
@@ -232,14 +182,6 @@ func (c *SlackClient) UsernameForMessage(message Message) (string, error) {
 		return fmt.Sprintf("bot %s", message.BotID), nil
 	}
 	return "ghost", nil
-}
-
-func (c *SlackClient) Close() {
-	// If c.ws_conn is nil, we never established a websocket connection, so there's nothing to close.
-	if c.wsConn == nil {
-		return
-	}
-	c.wsConn.Close(websocket.StatusNormalClosure, "")
 }
 
 func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
@@ -616,30 +558,34 @@ func (c *SlackClient) SendMessage(channelID string, message string) (*SendMessag
 	return response, nil
 }
 
-// ListenForMessagesFromBot listens for the first message from the bot in a given channel and prints its contents
-func (c *SlackClient) ListenForMessagesFromBot(channelID string, botName string) error {
+func (c *SlackClient) ConnectToRTM() (*RTMClient, error) {
+	response, err := c.get("rtm.connect", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// This is a Tier 1 Slack API, which are allowed to call once a minute with
+	// some bursts. It would be nice to cache the URL result in case we need to
+	// reconnect quickly (for example if gh-slack is called in a loop by some
+	// external program). Although the URL is valid for 30 seconds, it seems
+	// that it can only be used once, so that isn't possible.
+	connectResponse := &RTMConnectResponse{}
+	err = json.Unmarshal(response, connectResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	if !connectResponse.Ok {
+		return nil, fmt.Errorf("rtm.connect response not OK: %s", response)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 
-	for {
-		message := &RTMEvent{}
-		err := wsjson.Read(ctx, c.wsConn, &message)
-		if err != nil {
-			c.wsConn.Close(websocket.StatusUnsupportedData, "")
-			// TODO: what about the error from Close?
-			return err
-		}
-		if message.Channel == channelID && message.Type == "message" && strings.EqualFold(message.BotProfile.Name, botName) {
-			for _, attachment := range message.Attachments {
-				s, err := markdown.Render(attachment.Text)
-				if err != nil {
-					return err
-				}
-				s = strings.TrimRight(s, " \t\n")
-				fmt.Println(s)
-			}
-			break
-		}
+	socketConnection, _, err := websocket.Dial(ctx, connectResponse.URL, &websocket.DialOptions{})
+	if err != nil {
+		return nil, err
 	}
-	return nil
+
+	return &RTMClient{conn: socketConnection}, err
 }
