@@ -140,7 +140,7 @@ type SlackClient struct {
 	cache     Cache
 	log       *log.Logger
 	tz        *time.Location
-	ws_conn   *websocket.Conn
+	wsConn    *websocket.Conn
 }
 
 func New(team string, log *log.Logger) (*SlackClient, error) {
@@ -190,14 +190,14 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	socket_connection, _, err := websocket.Dial(ctx, connect_response.URL, &websocket.DialOptions{})
+	socketConnection, _, err := websocket.Dial(ctx, connect_response.URL, &websocket.DialOptions{})
 	if err != nil {
 		// We were unable to establish a websocket connection.
 		// TODO: If we're attempting to execute a Send subcommand, throw an error and exit
 		// since we won't be able to receive responses to messages we send.
 		return c, err
 	}
-	c.ws_conn = socket_connection
+	c.wsConn = socketConnection
 	// TODO: We should consider saving connect_response.URL to the cache:
 	// 1. rtm.connect is a Tier 1 Slack API, which means we're allowed about 1 call per minute. Short bursts are tolerated, but discouraged.
 	// 2. If we save connect_response.URL to the cache, we can avoid calling rtm.connect on every invocation of gh-slack.
@@ -236,10 +236,10 @@ func (c *SlackClient) UsernameForMessage(message Message) (string, error) {
 
 func (c *SlackClient) Close() {
 	// If c.ws_conn is nil, we never established a websocket connection, so there's nothing to close.
-	if c.ws_conn == nil {
+	if c.wsConn == nil {
 		return
 	}
-	c.ws_conn.Close(websocket.StatusNormalClosure, "")
+	c.wsConn.Close(websocket.StatusNormalClosure, "")
 }
 
 func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
@@ -665,14 +665,15 @@ func (c *SlackClient) ListenForMessagesFromBot(channelID string, botName string)
 	defer cancel()
 
 	for {
-		ws_message := &RTMEvent{}
-		err := wsjson.Read(ctx, c.ws_conn, &ws_message)
+		message := &RTMEvent{}
+		err := wsjson.Read(ctx, c.wsConn, &message)
 		if err != nil {
-			c.ws_conn.Close(websocket.StatusUnsupportedData, "")
+			c.wsConn.Close(websocket.StatusUnsupportedData, "")
+			// TODO: what about the error from Close?
 			return err
 		}
-		if ws_message.Channel == channelID && ws_message.Type == "message" && strings.EqualFold(ws_message.BotProfile.Name, botName) {
-			for _, attachment := range ws_message.Attachments {
+		if message.Channel == channelID && message.Type == "message" && strings.EqualFold(message.BotProfile.Name, botName) {
+			for _, attachment := range message.Attachments {
 				s, err := markdown.Render(attachment.Text)
 				if err != nil {
 					return err
