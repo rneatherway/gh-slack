@@ -313,7 +313,9 @@ func (c *SlackClient) ChannelInfo(id string) (*Channel, error) {
 	return &channelInfoReponse.Channel, nil
 }
 
-func (c *SlackClient) conversations(params map[string]string) ([]Channel, error) {
+func (c *SlackClient) conversations() ([]Channel, error) {
+	fmt.Fprintf(os.Stderr, "Populating channel cache (this may take a while)...")
+
 	channels := make([]Channel, 0, 1000)
 	conversations := &ConversationsResponse{}
 	for {
@@ -342,15 +344,14 @@ func (c *SlackClient) conversations(params map[string]string) ([]Channel, error)
 		}
 
 		channels = append(channels, conversations.Channels...)
-		c.log.Printf("Fetched %d channels (total so far %d)",
-			len(conversations.Channels),
-			len(channels))
+		fmt.Fprintf(os.Stderr, "%d...", len(channels))
 
 		if conversations.ResponseMetadata.NextCursor == "" {
 			break
 		}
 	}
 
+	fmt.Fprintf(os.Stderr, "done!\n")
 	return channels, nil
 }
 
@@ -505,7 +506,7 @@ func (c *SlackClient) ChannelIDForName(name string) (string, error) {
 		return id, nil
 	}
 
-	channels, err := c.conversations(nil)
+	channels, err := c.conversations()
 	if err != nil {
 		return "", err
 	}
@@ -524,7 +525,7 @@ func (c *SlackClient) ChannelIDForName(name string) (string, error) {
 		return "", err
 	}
 
-	if id, ok := c.cache.Users[name]; ok {
+	if id, ok := c.cache.Channels[name]; ok {
 		return id, nil
 	}
 
