@@ -7,6 +7,7 @@ require (
 	github.com/cli/go-gh v1.2.1
 	github.com/keybase/go-keychain v0.0.0-20220506172723-c18928ccd7f2
 	github.com/spf13/cobra v1.6.1
+	github.com/spf13/pflag v1.0.5
 	golang.org/x/crypto v0.0.0-20220507011949-2cf3adece122
 	modernc.org/sqlite v1.15.3
 	nhooyr.io/websocket v1.8.7
@@ -38,7 +39,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20200410134404-eec4a21b6bb0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/thlib/go-timezone-local v0.0.0-20210907160436-ef149e42d28e // indirect
 	github.com/yuin/goldmark v1.4.4 // indirect
 	github.com/yuin/goldmark-emoji v1.0.1 // indirect
