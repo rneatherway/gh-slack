@@ -381,6 +381,10 @@ func (c *SlackClient) conversations(params map[string]string) ([]Channel, error)
 				"cursor":           conversations.ResponseMetadata.NextCursor,
 				"exclude_archived": "true",
 				"limit":            "1000",
+
+				// TODO: this is the default, we might want to support private
+				// channels and DMs in the future
+				"types": "public_channel",
 			},
 		)
 		if err != nil {
@@ -506,33 +510,6 @@ func (c *SlackClient) saveCache() error {
 	return nil
 }
 
-func (c *SlackClient) getChannelID(name string) (string, error) {
-	if id, ok := c.cache.Channels[name]; ok {
-		return id, nil
-	}
-
-	channels, err := c.conversations(nil)
-	if err != nil {
-		return "", err
-	}
-
-	c.cache.Channels = make(map[string]string)
-	for _, ch := range channels {
-		c.cache.Channels[ch.Name] = ch.ID
-	}
-
-	err = c.saveCache()
-	if err != nil {
-		return "", err
-	}
-
-	if id, ok := c.cache.Channels[name]; ok {
-		return id, nil
-	}
-
-	return "", fmt.Errorf("no channel with name %q", name)
-}
-
 func (c *SlackClient) UsernameForID(id string) (string, error) {
 	if name, ok := c.cache.Users[id]; ok {
 		return name, nil
@@ -637,26 +614,6 @@ func (c *SlackClient) SendMessage(channelID string, message string) (*SendMessag
 	}
 
 	return response, nil
-}
-
-// TODO: Stub implementation of listening for messages
-func (c *SlackClient) ListenForMessages() error {
-	fmt.Println("=== Reading from websocket connection... ===")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-
-	for i := 0; i < 5; i++ {
-		ws_message := &RTMEvent{}
-		err := wsjson.Read(ctx, c.ws_conn, ws_message)
-		if err != nil {
-			c.ws_conn.Close(websocket.StatusUnsupportedData, "")
-			return err
-		}
-		fmt.Println("=== Received ===")
-		fmt.Println(ws_message)
-	}
-	fmt.Println("=== Done Reading ===")
-	return nil
 }
 
 // ListenForMessagesFromBot listens for the first message from the bot in a given channel and prints its contents
