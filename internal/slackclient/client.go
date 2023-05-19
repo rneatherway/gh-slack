@@ -635,6 +635,7 @@ func (c *SlackClient) ListenForMessagesFromBot(channelID string, botName string)
 				if err != nil {
 					return err
 				}
+				s = strings.TrimRight(s, " \t\n")
 				fmt.Println(s)
 			}
 			break

@@ -89,7 +89,9 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 		return err
 	}
 
-	resp, err := client.SendMessage(channelID, message)
+	// We get back the permalink to the message we just sent, but I don't
+	// currently see a use for that.
+	_, err = client.SendMessage(channelID, message)
 	if err != nil {
 		return err
 	}
@@ -101,7 +103,7 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 			return fmt.Errorf("failed to listen to messages: %w", err)
 		}
 	}
-	fmt.Fprintln(os.Stdout, resp.Output(team, channelID))
+
 	return nil
 }
 
