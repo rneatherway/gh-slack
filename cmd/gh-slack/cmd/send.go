@@ -72,7 +72,8 @@ var sendCmd = &cobra.Command{
 		}
 		return sendMessage(team, channelName, message, bot, logger)
 	},
-	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> [-b <bot-name> | --wait]`,
+	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> -b <bot-name>
+  gh-slack send -m <message> -w # If bot is specified in config`,
 }
 
 // sendMessage sends a message to a Slack channel.
@@ -114,9 +115,9 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 }
 
 func init() {
-	sendCmd.Flags().StringP("channel", "c", "", "Channel name to send the message to (required)")
-	sendCmd.Flags().StringP("message", "m", "", "Message to send (required)")
-	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required)")
+	sendCmd.Flags().StringP("channel", "c", "", "Channel name to send the message to (required here or in config at extensions.slack.channel)")
+	sendCmd.Flags().StringP("message", "m", "", "Message to send (required here or in config at extensions.slack.message)")
+	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required here or in config at extensions.slack.team)")
 	sendCmd.MarkFlagRequired("message")
 	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to wait for a response from (implies --wait))")
 	sendCmd.Flags().BoolP("wait", "w", false, "Wait for message responses")

@@ -7,13 +7,22 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "gh-slack [command]",
-	Short: "Command line tool for interacting with Slack through gh cli",
-	Long:  `A command line tool for interacting with Slack through the gh cli.`,
+	SilenceUsage:  true,
+	SilenceErrors: true,
+	Use:           "gh-slack [command]",
+	Short:         "Command line tool for interacting with Slack through gh cli",
+	Long:          `A command line tool for interacting with Slack through the gh cli.`,
 	Example: `  gh-slack -i <issue-url> <slack-permalink>  # defaults to read command
   gh-slack read <slack-permalink>
   gh-slack read -i <issue-url> <slack-permalink>
-  gh-slack send -m <message> -c <channel-id> -t <team-name>`,
+  gh-slack send -m <message> -c <channel-id> -t <team-name>
+
+  # Example configuration file fragment:
+  extensions:
+    slack:
+      team: github
+      channel: ops
+      bot: hubot`,
 }
 
 func Execute() error {
