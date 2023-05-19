@@ -15,20 +15,51 @@ This project provides a means of archiving a Slack conversation or thread as mar
 ## Usage
 
     Usage:
-      gh slack [OPTIONS] [Start]
+      gh-slack [command]
 
-    Application Options:
-      -l, --limit=   Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched) (default: 20)
-      -v, --verbose  Show verbose debug information
-          --version  Output version information
-      -d, --details  Wrap the markdown output in HTML <details> tags
-      -i, --issue=   The URL of a repository to post the output as a new issue, or the URL of an issue to add a comment to that issue
+      If no command is specified, the default is "read". The default command also requires a permalink argument <START> for the first message to fetch.
+      Use "gh-slack read --help" for more information about the default command behaviour.
 
-    Help Options:
-      -h, --help     Show this help message
+    Examples:
+      gh-slack -i <issue-url> <slack-permalink>  # defaults to read command
+      gh-slack read <slack-permalink>
+      gh-slack read -i <issue-url> <slack-permalink>
+      gh-slack send -m <message> -c <channel-id> -t <team-name>
 
-    Arguments:
-      Start:         Required. Permalink for the first message to fetch. Following messages are then fetched from that channel (or thread if applicable)
+      # Example configuration file fragment:
+      extensions:
+        slack:
+          team: github
+          channel: ops
+          bot: hubot
+
+    Available Commands:
+      completion  Generate the autocompletion script for the specified shell
+      help        Help about any command
+      read        Reads a Slack channel and outputs the messages as markdown
+      send        Sends a message to a Slack channel
+
+    Flags:
+      -h, --help      help for gh-slack
+      -v, --verbose   Show verbose debug information
+
+    Use "gh-slack [command] --help" for more information about a command.
+
+## Configuration
+
+The `send` subcommand supports storing default values for the `team`, `bot` and
+`channel` required parameters in gh's own configuration file using a block like:
+
+```yaml
+extensions:
+  slack:
+    team: foo
+    channel: ops
+    bot: robot
+```
+
+This is particularly useful if you want to use the `send` subcommand to interact
+with a bot serving chatops in a standard operations channel.
 
 ## Limitations
 
