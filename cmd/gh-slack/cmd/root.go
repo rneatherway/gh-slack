@@ -6,6 +6,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const sendConfigExample = `
+  # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
+  extensions:
+    slack:
+      team: github
+      channel: ops
+      bot: hubot`
+
 var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	SilenceErrors: true,
@@ -16,13 +24,7 @@ var rootCmd = &cobra.Command{
   gh-slack read <slack-permalink>
   gh-slack read -i <issue-url> <slack-permalink>
   gh-slack send -m <message> -c <channel-id> -t <team-name>
-
-  # Example configuration file fragment:
-  extensions:
-    slack:
-      team: github
-      channel: ops
-      bot: hubot`,
+  ` + sendConfigExample,
 }
 
 func Execute() error {
