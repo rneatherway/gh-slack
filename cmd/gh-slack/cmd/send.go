@@ -86,7 +86,7 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 
 	var rtmClient *slackclient.RTMClient
 	if bot != "" {
-		rtmClient, err := client.ConnectToRTM()
+		rtmClient, err = client.ConnectToRTM()
 		if err != nil {
 			return err
 		}
