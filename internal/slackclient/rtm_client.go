@@ -62,14 +62,19 @@ func (c *RTMClient) correctUser(message *RTMEvent, botName string) bool {
 }
 
 func trimAndPrint(text string) {
-	s, err := markdown.Render(strings.TrimRight(text, " \t\n"))
+	s, err := markdown.Render(text)
 	if err != nil {
 		// This is a bit lazy, but the default configuration of the markdown
 		// renderer cannot fail.
 		panic(err)
 	}
 
-	fmt.Println(s)
+	s = strings.TrimRight(s, " \t\n")
+	if s == "" {
+		return
+	}
+
+	fmt.Printf("%s\n", s)
 }
 
 // ListenForMessagesFromBot listens for the first message from the bot in a given channel and prints its contents
