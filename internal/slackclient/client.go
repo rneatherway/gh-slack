@@ -1,6 +1,8 @@
 package slackclient
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,9 +13,12 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/rneatherway/gh-slack/internal/httpclient"
+
+	"nhooyr.io/websocket"
 )
 
 type Cursor struct {
@@ -36,6 +41,39 @@ type Message struct {
 	Attachments []Attachment
 	Ts          string
 	Type        string
+}
+
+type SendMessage struct {
+	ThreadTS    string       `json:"thread_ts,omitempty"`
+	Channel     string       `json:"channel"` // required
+	Text        string       `json:"text,omitempty"`
+	Attachments []Attachment `json:"attachments,omitempty"`
+}
+
+type SendMessageResponse struct {
+	OK      bool    `json:"ok"`
+	Error   string  `json:"error,omitempty"`
+	Warning string  `json:"warning,omitempty"`
+	TS      string  `json:"ts,omitempty"`
+	Message Message `json:"message,omitempty"`
+}
+
+type RTMConnectResponse struct {
+	Ok    bool   `json:"ok"`
+	Error string `json:"error"`
+	URL   string `json:"url"`
+}
+
+type BotProfile struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+func (r *SendMessageResponse) Output(team, channelID string) string {
+	if !r.OK {
+		return fmt.Sprintf("Error: %s", r.Error)
+	}
+	return fmt.Sprintf("Message permalink https://%s.slack.com/archives/%s/p%s", team, channelID, strings.ReplaceAll(r.TS, ".", ""))
 }
 
 type HistoryResponse struct {
@@ -115,8 +153,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 		tz:        time.Now().Location(),
 	}
 
-	err = c.loadCache()
-	return c, err
+	return c, c.loadCache()
 }
 
 // Null produces a SlackClient suitable for testing that does not try to load
@@ -198,6 +235,64 @@ func (c *SlackClient) get(path string, params map[string]string) ([]byte, error)
 	return body, nil
 }
 
+func (c *SlackClient) post(path string, params map[string]string, msg *SendMessage) ([]byte, error) {
+	u, err := url.Parse(fmt.Sprintf("https://%s.slack.com/api/", c.team))
+	if err != nil {
+		return nil, err
+	}
+	u.Path += path
+	q := u.Query()
+	for p := range params {
+		q.Add(p, params[p])
+	}
+	u.RawQuery = q.Encode()
+
+	var body []byte
+	messageBytes, err := json.Marshal(msg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal message: %w", err)
+	}
+	reqBody := bytes.NewReader(messageBytes)
+
+	for {
+		req, err := http.NewRequest(http.MethodPost, u.String(), reqBody)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json; charset=utf-8")
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.auth.Token))
+		for key := range c.auth.Cookies {
+			req.AddCookie(&http.Cookie{Name: key, Value: c.auth.Cookies[key]})
+		}
+
+		resp, err := httpclient.Client.Do(req)
+		if err != nil {
+			return nil, err
+		}
+
+		body, err = io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		if resp.StatusCode == 429 {
+			s, err := strconv.Atoi(resp.Header["Retry-After"][0])
+			if err != nil {
+				return nil, err
+			}
+			d := time.Duration(s)
+			c.log.Printf("rate limited, waiting %ds", d)
+			time.Sleep(d * time.Second)
+		} else if resp.StatusCode >= 300 {
+			return nil, fmt.Errorf("status code %d, headers: %q, body: %q", resp.StatusCode, resp.Header, body)
+		} else {
+			break
+		}
+	}
+
+	return body, nil
+}
+
 func (c *SlackClient) ChannelInfo(id string) (*Channel, error) {
 	body, err := c.get("conversations.info",
 		map[string]string{"channel": id})
@@ -218,7 +313,9 @@ func (c *SlackClient) ChannelInfo(id string) (*Channel, error) {
 	return &channelInfoReponse.Channel, nil
 }
 
-func (c *SlackClient) conversations(params map[string]string) ([]Channel, error) {
+func (c *SlackClient) conversations() ([]Channel, error) {
+	fmt.Fprintf(os.Stderr, "Populating channel cache (this may take a while)...")
+
 	channels := make([]Channel, 0, 1000)
 	conversations := &ConversationsResponse{}
 	for {
@@ -226,7 +323,13 @@ func (c *SlackClient) conversations(params map[string]string) ([]Channel, error)
 		body, err := c.get("conversations.list",
 			map[string]string{
 				"cursor":           conversations.ResponseMetadata.NextCursor,
-				"exclude_archived": "true"},
+				"exclude_archived": "true",
+				"limit":            "1000",
+
+				// TODO: this is the default, we might want to support private
+				// channels and DMs in the future
+				"types": "public_channel",
+			},
 		)
 		if err != nil {
 			return nil, err
@@ -241,15 +344,14 @@ func (c *SlackClient) conversations(params map[string]string) ([]Channel, error)
 		}
 
 		channels = append(channels, conversations.Channels...)
-		c.log.Printf("Fetched %d channels (total so far %d)",
-			len(conversations.Channels),
-			len(channels))
+		fmt.Fprintf(os.Stderr, "%d...", len(channels))
 
 		if conversations.ResponseMetadata.NextCursor == "" {
 			break
 		}
 	}
 
+	fmt.Fprintf(os.Stderr, "done!\n")
 	return channels, nil
 }
 
@@ -351,36 +453,9 @@ func (c *SlackClient) saveCache() error {
 	return nil
 }
 
-func (c *SlackClient) getChannelID(name string) (string, error) {
-	if id, ok := c.cache.Channels[name]; ok {
-		return id, nil
-	}
-
-	channels, err := c.conversations(nil)
-	if err != nil {
-		return "", err
-	}
-
-	c.cache.Channels = make(map[string]string)
-	for _, ch := range channels {
-		c.cache.Channels[ch.Name] = ch.ID
-	}
-
-	err = c.saveCache()
-	if err != nil {
-		return "", err
-	}
-
-	if id, ok := c.cache.Channels[name]; ok {
-		return id, nil
-	}
-
-	return "", fmt.Errorf("no channel with name %q", name)
-}
-
 func (c *SlackClient) UsernameForID(id string) (string, error) {
-	if id, ok := c.cache.Users[id]; ok {
-		return id, nil
+	if name, ok := c.cache.Users[id]; ok {
+		return name, nil
 	}
 
 	ur, err := c.users(nil)
@@ -398,8 +473,8 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 		return "", err
 	}
 
-	if id, ok := c.cache.Users[id]; ok {
-		return id, nil
+	if name, ok := c.cache.Users[id]; ok {
+		return name, nil
 	}
 
 	body, err := c.get("users.info", map[string]string{"user": id})
@@ -426,6 +501,95 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 	return user.User.Name, nil
 }
 
+func (c *SlackClient) ChannelIDForName(name string) (string, error) {
+	if id, ok := c.cache.Channels[name]; ok {
+		return id, nil
+	}
+
+	channels, err := c.conversations()
+	if err != nil {
+		return "", err
+	}
+
+	c.cache.Channels = make(map[string]string)
+	for _, ch := range channels {
+		if !ch.Is_Channel {
+			fmt.Fprintf(os.Stderr, "Skipping non-channel %q\n", ch.Name)
+			continue
+		}
+		c.cache.Channels[ch.Name] = ch.ID
+	}
+
+	err = c.saveCache()
+	if err != nil {
+		return "", err
+	}
+
+	if id, ok := c.cache.Channels[name]; ok {
+		return id, nil
+	}
+
+	return "", fmt.Errorf("could not find any channel with name %q", name)
+}
+
 func (c *SlackClient) GetLocation() *time.Location {
 	return c.tz
+}
+
+func (c *SlackClient) SendMessage(channelID string, message string) (*SendMessageResponse, error) {
+	body, err := c.post("chat.postMessage",
+		map[string]string{}, &SendMessage{
+			Channel: channelID,
+			Text:    message,
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendMessageResponse{}
+	err = json.Unmarshal(body, response)
+	if err != nil {
+		return nil, err
+	}
+
+	if !response.OK {
+		return nil, fmt.Errorf("chat.postMessage response not OK: %s", body)
+	}
+
+	return response, nil
+}
+
+func (c *SlackClient) ConnectToRTM() (*RTMClient, error) {
+	response, err := c.get("rtm.connect", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// This is a Tier 1 Slack API, which are allowed to call once a minute with
+	// some bursts. It would be nice to cache the URL result in case we need to
+	// reconnect quickly (for example if gh-slack is called in a loop by some
+	// external program). Although the URL is valid for 30 seconds, it seems
+	// that it can only be used once, so that isn't possible.
+	connectResponse := &RTMConnectResponse{}
+	err = json.Unmarshal(response, connectResponse)
+	if err != nil {
+		return nil, err
+	}
+
+	if !connectResponse.Ok {
+		return nil, fmt.Errorf("rtm.connect response not OK: %s", response)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
+	socketConnection, _, err := websocket.Dial(ctx, connectResponse.URL, &websocket.DialOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	return &RTMClient{
+		conn:        socketConnection,
+		slackClient: c,
+	}, err
 }
