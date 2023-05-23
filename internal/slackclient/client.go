@@ -588,5 +588,8 @@ func (c *SlackClient) ConnectToRTM() (*RTMClient, error) {
 		return nil, err
 	}
 
-	return &RTMClient{conn: socketConnection}, err
+	return &RTMClient{
+		conn:        socketConnection,
+		slackClient: c,
+	}, err
 }

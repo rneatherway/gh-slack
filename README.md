@@ -26,12 +26,12 @@ This project provides a means of archiving a Slack conversation or thread as mar
       gh-slack read -i <issue-url> <slack-permalink>
       gh-slack send -m <message> -c <channel-id> -t <team-name>
 
-      # Example configuration file fragment:
+      # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
       extensions:
         slack:
           team: github
           channel: ops
-          bot: hubot
+          bot: hubot        # Can be a user id (most reliable), bot profile name or username
 
     Available Commands:
       completion  Generate the autocompletion script for the specified shell
@@ -55,7 +55,7 @@ extensions:
   slack:
     team: foo
     channel: ops
-    bot: robot
+    bot: robot        # Can be a user id (most reliable), bot profile name or username
 ```
 
 This is particularly useful if you want to use the `send` subcommand to interact

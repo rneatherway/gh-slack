@@ -120,7 +120,7 @@ func init() {
 	sendCmd.Flags().StringP("message", "m", "", "Message to send (required here or in config)")
 	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required here or in config)")
 	sendCmd.MarkFlagRequired("message")
-	sendCmd.Flags().StringP("bot", "b", "", "Name of the bot to wait for a response from (implies --wait)")
+	sendCmd.Flags().StringP("bot", "b", "", "User id (most reliable), profile name or username to wait for a response from (implies --wait)")
 	sendCmd.Flags().BoolP("wait", "w", false, "Wait for message responses")
 	sendCmd.MarkFlagsRequiredTogether("message")
 	sendCmd.SetUsageTemplate(sendCmdUsage)

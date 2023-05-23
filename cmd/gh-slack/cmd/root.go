@@ -10,9 +10,9 @@ const sendConfigExample = `
   # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
   extensions:
     slack:
-      team: github
+      team: foo
       channel: ops
-      bot: hubot`
+      bot: robot        # Can be a user id (most reliable), bot profile name or username`
 
 var rootCmd = &cobra.Command{
 	SilenceUsage:  true,
