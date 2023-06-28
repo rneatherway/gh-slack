@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/rneatherway/gh-slack/actions/workflows/ci.yml/badge.svg)](https://github.com/rneatherway/gh-slack/actions/workflows/ci.yml) [![Release](https://github.com/rneatherway/gh-slack/actions/workflows/release.yml/badge.svg)](https://github.com/rneatherway/gh-slack/actions/workflows/release.yml)
 
-This project provides a means of archiving a Slack conversation or thread as markdown. For convenience it is installable as a `gh` extension.
+This project provides a means of archiving a Slack conversation or thread as markdown. For convenience it is installable as a [`gh`](https://github.com/cli/cli) [extension]([url](https://cli.github.com/manual/gh_extension)).
 
 ## Installation
 
@@ -15,16 +15,16 @@ This project provides a means of archiving a Slack conversation or thread as mar
 ## Usage
 
     Usage:
-      gh-slack [command]
+      gh slack [command]
 
       If no command is specified, the default is "read". The default command also requires a permalink argument <START> for the first message to fetch.
-      Use "gh-slack read --help" for more information about the default command behaviour.
+      Use "gh slack read --help" for more information about the default command behaviour.
 
     Examples:
-      gh-slack -i <issue-url> <slack-permalink>  # defaults to read command
-      gh-slack read <slack-permalink>
-      gh-slack read -i <issue-url> <slack-permalink>
-      gh-slack send -m <message> -c <channel-id> -t <team-name>
+      gh slack -i <issue-url> <slack-permalink>  # defaults to read command
+      gh slack read <slack-permalink>
+      gh slack read -i <issue-url> <slack-permalink>
+      gh slack send -m <message> -c <channel-id> -t <team-name>
 
       # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
       extensions:
@@ -43,7 +43,7 @@ This project provides a means of archiving a Slack conversation or thread as mar
       -h, --help      help for gh-slack
       -v, --verbose   Show verbose debug information
 
-    Use "gh-slack [command] --help" for more information about a command.
+    Use "gh slack [command] --help" for more information about a command.
 
 ## Configuration
 
