@@ -24,7 +24,7 @@ This project provides a means of archiving a Slack conversation or thread as mar
       gh slack -i <issue-url> <slack-permalink>  # defaults to read command
       gh slack read <slack-permalink>
       gh slack read -i <issue-url> <slack-permalink>
-      gh slack send -m <message> -c <channel-id> -t <team-name>
+      gh slack send -m <message> -c <channel-name> -t <team-name>
 
       # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
       extensions:
