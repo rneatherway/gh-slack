@@ -326,9 +326,8 @@ func (c *SlackClient) conversations() ([]Channel, error) {
 				"exclude_archived": "true",
 				"limit":            "1000",
 
-				// TODO: this is the default, we might want to support private
-				// channels and DMs in the future
-				"types": "public_channel",
+				// TODO: we might want to support DMs in the future
+				"types": "public_channel, private_channel",
 			},
 		)
 		if err != nil {
