@@ -23,7 +23,7 @@ var rootCmd = &cobra.Command{
 	Example: `  gh-slack -i <issue-url> <slack-permalink>  # defaults to read command
   gh-slack read <slack-permalink>
   gh-slack read -i <issue-url> <slack-permalink>
-  gh-slack send -m <message> -c <channel-id> -t <team-name>
+  gh-slack send -m <message> -c <channel-name> -t <team-name>
   ` + sendConfigExample,
 }
 
