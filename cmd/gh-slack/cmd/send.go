@@ -49,6 +49,11 @@ var sendCmd = &cobra.Command{
 			return err
 		}
 
+		outputPermalink, err := cmd.Flags().GetBool("output-permalink")
+		if err != nil {
+			return err
+		}
+
 		wait, err := cmd.Flags().GetBool("wait")
 		if err != nil {
 			return err
@@ -70,7 +75,7 @@ var sendCmd = &cobra.Command{
 		if verbose {
 			logger = log.Default()
 		}
-		return sendMessage(team, channelName, message, bot, logger)
+		return sendMessage(team, channelName, message, bot, outputPermalink, logger)
 	},
 	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> -b <bot-name>
   gh-slack send -m <message> -w # If bot is specified in config
@@ -78,7 +83,7 @@ var sendCmd = &cobra.Command{
 }
 
 // sendMessage sends a message to a Slack channel.
-func sendMessage(team, channelName, message, bot string, logger *log.Logger) error {
+func sendMessage(team, channelName, message, bot string, outputPermalink bool, logger *log.Logger) error {
 	client, err := slackclient.New(team, logger)
 	if err != nil {
 		return err
@@ -98,11 +103,12 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 		return err
 	}
 
-	// We get back the permalink to the message we just sent, but I don't
-	// currently see a use for that.
-	_, err = client.SendMessage(channelID, message)
+	permalink, err := client.SendMessage(channelID, message)
 	if err != nil {
 		return err
+	}
+	if outputPermalink {
+		fmt.Println(permalink)
 	}
 
 	if bot != "" {
@@ -122,6 +128,7 @@ func init() {
 	sendCmd.MarkFlagRequired("message")
 	sendCmd.Flags().StringP("bot", "b", "", "User id (most reliable), profile name or username to wait for a response from (implies --wait)")
 	sendCmd.Flags().BoolP("wait", "w", false, "Wait for message responses")
+	sendCmd.Flags().BoolP("output-permalink", "o", false, "Show sent message permalink")
 	sendCmd.MarkFlagsRequiredTogether("message")
 	sendCmd.SetUsageTemplate(sendCmdUsage)
 	sendCmd.SetHelpTemplate(sendCmdUsage)
