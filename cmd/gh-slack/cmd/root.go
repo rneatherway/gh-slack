@@ -41,6 +41,7 @@ var verbose bool = false
 func init() {
 	rootCmd.AddCommand(readCmd)
 	rootCmd.AddCommand(sendCmd)
+	rootCmd.AddCommand(apiCmd)
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show verbose debug information")
 	rootCmd.SetHelpTemplate(rootCmdUsageTemplate)
 	rootCmd.SetUsageTemplate(rootCmdUsageTemplate)
