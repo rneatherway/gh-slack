@@ -33,7 +33,7 @@ var apiCmd = &cobra.Command{
 		verb := strings.ToUpper(args[0])
 		path := args[1]
 
-		fields, err := cmd.Flags().GetStringSlice("field")
+		fields, err := cmd.Flags().GetStringArray("field")
 		if err != nil {
 			return err
 		}
@@ -69,7 +69,7 @@ var fields []string
 var body string
 
 func init() {
-	apiCmd.Flags().StringSliceVarP(&fields, "field", "f", nil, "Fields to pass to the api call")
+	apiCmd.Flags().StringArrayVarP(&fields, "field", "f", nil, "Fields to pass to the api call")
 	apiCmd.Flags().StringVarP(&body, "body", "b", "{}", "Body to send as JSON")
 	apiCmd.Flags().StringP("team", "t", "", "Slack team name (required here or in config)")
 	apiCmd.SetHelpTemplate(apiCmdUsage)
