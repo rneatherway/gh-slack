@@ -12,7 +12,7 @@ import (
 )
 
 var apiCmd = &cobra.Command{
-	Use:   "api verb path",
+	Use:   "api [verb] path",
 	Short: "Send an API call to slack",
 	Long:  "Send an API call to slack",
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -25,13 +25,6 @@ var apiCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		if len(args) != 2 {
-			return fmt.Errorf("Expected 2 arguments: verb and path, see help")
-		}
-
-		verb := strings.ToUpper(args[0])
-		path := args[1]
 
 		fields, err := cmd.Flags().GetStringArray("field")
 		if err != nil {
@@ -53,6 +46,21 @@ var apiCmd = &cobra.Command{
 			return err
 		}
 
+		var verb, path string
+		if len(args) == 2 {
+			verb = strings.ToUpper(args[0])
+			path = args[1]
+		} else if len(args) == 1 {
+			path = args[0]
+			if body == "" {
+				verb = "GET"
+			} else {
+				verb = "POST"
+			}
+		} else {
+			return fmt.Errorf("Expected 1 or 2 arguments: verb and/or path, see help")
+		}
+
 		response, err := client.API(verb, path, mappedFields, body)
 		if err != nil {
 			return err
@@ -70,7 +78,7 @@ var body string
 
 func init() {
 	apiCmd.Flags().StringArrayVarP(&fields, "field", "f", nil, "Fields to pass to the api call")
-	apiCmd.Flags().StringVarP(&body, "body", "b", "{}", "Body to send as JSON")
+	apiCmd.Flags().StringVarP(&body, "body", "b", "", "Body to send as JSON")
 	apiCmd.Flags().StringP("team", "t", "", "Slack team name (required here or in config)")
 	apiCmd.SetHelpTemplate(apiCmdUsage)
 	apiCmd.SetUsageTemplate(apiCmdUsage)
@@ -99,7 +107,12 @@ Aliases:
   {{.NameAndAliases}}{{end}}{{if .HasExample}}
 
 Examples:
-{{.Example}}{{end}}{{if .HasAvailableSubCommands}}{{$cmds := .Commands}}{{if eq (len .Groups) 0}}
+{{.Example}}
+
+The verb is optional:
+- If no body is sent, GET will be used.
+- If a body is sent, POST will be used.
+{{end}}{{if .HasAvailableSubCommands}}{{$cmds := .Commands}}{{if eq (len .Groups) 0}}
 
 Available Commands:{{range $cmds}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
   {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{else}}{{range $group := .Groups}}
