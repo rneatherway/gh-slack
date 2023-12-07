@@ -24,6 +24,7 @@ var rootCmd = &cobra.Command{
   gh-slack read <slack-permalink>
   gh-slack read -i <issue-url> <slack-permalink>
   gh-slack send -m <message> -c <channel-name> -t <team-name>
+  gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}
   ` + sendConfigExample,
 }
 
@@ -41,6 +42,7 @@ var verbose bool = false
 func init() {
 	rootCmd.AddCommand(readCmd)
 	rootCmd.AddCommand(sendCmd)
+	rootCmd.AddCommand(apiCmd)
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show verbose debug information")
 	rootCmd.SetHelpTemplate(rootCmdUsageTemplate)
 	rootCmd.SetUsageTemplate(rootCmdUsageTemplate)
