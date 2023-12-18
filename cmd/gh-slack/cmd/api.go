@@ -58,10 +58,10 @@ var apiCmd = &cobra.Command{
 				verb = "POST"
 			}
 		} else {
-			return fmt.Errorf("Expected 1 or 2 arguments: verb and/or path, see help")
+			return fmt.Errorf("expected 1 or 2 arguments: verb and/or path, see help")
 		}
 
-		response, err := client.API(verb, path, mappedFields, body)
+		response, err := client.API(verb, path, mappedFields, []byte(body))
 		if err != nil {
 			return err
 		}

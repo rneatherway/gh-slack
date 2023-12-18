@@ -1,7 +1,7 @@
 //go:build darwin
 // +build darwin
 
-package slackclient
+package extclient
 
 import (
 	"errors"

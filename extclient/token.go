@@ -1,4 +1,4 @@
-package slackclient
+package extclient
 
 import (
 	"database/sql"

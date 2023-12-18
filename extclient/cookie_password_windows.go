@@ -1,7 +1,7 @@
 //go:build windows
 // +build windows
 
-package slackclient
+package extclient
 
 import (
 	"encoding/base64"

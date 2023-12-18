@@ -1,7 +1,7 @@
 //go:build linux
 // +build linux
 
-package slackclient
+package extclient
 
 import (
 	"errors"

@@ -3,7 +3,7 @@
 
 // These tests require that you be logged into Slack on the current machine.
 // You must also pass '-tags network' to 'go test'
-package slackclient
+package extclient
 
 import "testing"
 
