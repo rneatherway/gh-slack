@@ -3,7 +3,7 @@ package mocks
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/rneatherway/gh-slack/internal/slackclient"
@@ -11,29 +11,23 @@ import (
 
 // MockClient is the mock client
 type MockClient struct {
-	DoFunc func(req *http.Request) (*http.Response, error)
+	Next func(*http.Request) (*http.Response, error)
 }
 
-var (
-	// GetDoFunc fetches the mock client's `Do` func
-	GetDoFunc func(req *http.Request) (*http.Response, error)
-)
-
-// Do is the mock client's `Do` func
-func (m *MockClient) Do(req *http.Request) (*http.Response, error) {
-	return GetDoFunc(req)
+func (m *MockClient) RoundTrip(req *http.Request) (*http.Response, error) {
+	return m.Next(req)
 }
 
-func MockSuccessfulAuthResponse() {
-	GetDoFunc = func(*http.Request) (*http.Response, error) {
+func (m *MockClient) MockSuccessfulAuthResponse() {
+	m.Next = func(*http.Request) (*http.Response, error) {
 		return &http.Response{
 			StatusCode: 200,
-			Body:       ioutil.NopCloser(bytes.NewReader([]byte(`{"api_token":"8675309"}`))),
+			Body:       io.NopCloser(bytes.NewReader([]byte(`{"api_token":"8675309"}`))),
 		}, nil
 	}
 }
 
-func MockSuccessfulUsersResponse(fakeUsers []slackclient.User) {
+func (m *MockClient) MockSuccessfulUsersResponse(fakeUsers []slackclient.User) {
 	json := `{"Ok":true,"Members":[`
 	for i, user := range fakeUsers {
 		json += fmt.Sprintf(`{"ID":"%s","Name":"%s"}`, user.ID, user.Name)
@@ -42,8 +36,7 @@ func MockSuccessfulUsersResponse(fakeUsers []slackclient.User) {
 		}
 	}
 	json += `]}`
-	fmt.Println("JSON:", json)
-	GetDoFunc = func(*http.Request) (*http.Response, error) {
-		return &http.Response{StatusCode: 200, Body: ioutil.NopCloser(bytes.NewReader([]byte(json)))}, nil
+	m.Next = func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: 200, Body: io.NopCloser(bytes.NewReader([]byte(json)))}, nil
 	}
 }

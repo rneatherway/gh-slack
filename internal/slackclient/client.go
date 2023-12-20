@@ -6,13 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/rneatherway/gh-slack/extclient"
+	"github.com/rneatherway/slackclient"
 
 	"nhooyr.io/websocket"
 )
@@ -120,7 +121,7 @@ type SlackClient struct {
 	cachePath string
 	team      string
 	cache     Cache
-	client    *extclient.SlackClient
+	client    *slackclient.SlackClient
 	log       *log.Logger
 	tz        *time.Location
 }
@@ -136,7 +137,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	}
 	cachePath := path.Join(dataHome, "gh-slack")
 
-	client, err := extclient.New(team)
+	client, err := slackclient.New(team)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +155,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 
 // Null produces a SlackClient suitable for testing that does not try to load
 // the Slack token or cookies from disk, and starts with an empty cache.
-func Null(team string) (*SlackClient, error) {
+func Null(team string, roundTripper http.RoundTripper) (*SlackClient, error) {
 	cacheFile, err := os.CreateTemp("", "gh-slack-cache")
 	if err != nil {
 		return nil, err
@@ -162,6 +163,7 @@ func Null(team string) (*SlackClient, error) {
 
 	return &SlackClient{
 		team:      team,
+		client:    slackclient.Null(roundTripper),
 		cachePath: cacheFile.Name(),
 		tz:        time.UTC,
 	}, nil
