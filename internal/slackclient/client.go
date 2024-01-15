@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rneatherway/slackclient"
+	slack "github.com/rneatherway/slackclient"
 
 	"nhooyr.io/websocket"
 )
@@ -121,7 +121,7 @@ type SlackClient struct {
 	cachePath string
 	team      string
 	cache     Cache
-	client    *slackclient.SlackClient
+	client    *slack.Client
 	log       *log.Logger
 	tz        *time.Location
 }
@@ -137,7 +137,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	}
 	cachePath := path.Join(dataHome, "gh-slack")
 
-	client, err := slackclient.New(team)
+	client, err := slack.NewClient(team)
 	if err != nil {
 		return nil, err
 	}
@@ -163,7 +163,7 @@ func Null(team string, roundTripper http.RoundTripper) (*SlackClient, error) {
 
 	return &SlackClient{
 		team:      team,
-		client:    slackclient.Null(roundTripper),
+		client:    slack.Null(roundTripper),
 		cachePath: cacheFile.Name(),
 		tz:        time.UTC,
 	}, nil
@@ -180,7 +180,7 @@ func (c *SlackClient) UsernameForMessage(message Message) (string, error) {
 }
 
 func (c *SlackClient) API(verb, path string, params map[string]string, body []byte) ([]byte, error) {
-	return c.client.API(verb, path, params, body)
+	return c.client.API(context.TODO(), verb, path, params, body)
 }
 
 func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
