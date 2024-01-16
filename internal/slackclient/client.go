@@ -162,9 +162,12 @@ func Null(team string, roundTripper http.RoundTripper) (*SlackClient, error) {
 		return nil, err
 	}
 
+	client := slack.NewClient("test-team")
+	client.WithHTTPClient(&http.Client{Transport: roundTripper})
+
 	return &SlackClient{
 		team:      team,
-		client:    slack.Null(roundTripper),
+		client:    client,
 		cachePath: cacheFile.Name(),
 		tz:        time.UTC,
 	}, nil
