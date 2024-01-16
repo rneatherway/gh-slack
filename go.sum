@@ -114,8 +114,8 @@ github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec/go.mod h1:qq
 github.com/rivo/uniseg v0.1.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.2.0 h1:S1pD9weZBuJdFmowNwbpi7BJ8TNftyUImj/0WQi72jY=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
-github.com/rneatherway/slackclient v0.0.0-20231220165043-4637987fb6bf h1:aidSKow6J6M+HBMqCUq7rjy47n6VGN+5jJovDtlmPLg=
-github.com/rneatherway/slackclient v0.0.0-20231220165043-4637987fb6bf/go.mod h1:4qjWFXil77adHbdMVR+h776rsg92SFBxr1fjw7DfIDs=
+github.com/rneatherway/slackclient v0.0.0-20240116185845-7be452df2b1c h1:omFPQNDqUdm6HphReID9BflVU7FH2Mpus4PN0Vh92dw=
+github.com/rneatherway/slackclient v0.0.0-20240116185845-7be452df2b1c/go.mod h1:4qjWFXil77adHbdMVR+h776rsg92SFBxr1fjw7DfIDs=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/spf13/cobra v1.6.1 h1:o94oiPyS4KD1mPy2fmcYYHHfCxLqYjJOhGsCHFZtEzA=
 github.com/spf13/cobra v1.6.1/go.mod h1:IOw/AERYS7UzyrGinqmz6HLUo219MORXGxhbaJUqzrY=
