@@ -1,22 +1,19 @@
 package slackclient
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"path"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/rneatherway/gh-slack/internal/httpclient"
+	"github.com/rneatherway/slack"
 
 	"nhooyr.io/websocket"
 )
@@ -123,8 +120,8 @@ type Cache struct {
 type SlackClient struct {
 	cachePath string
 	team      string
-	auth      *SlackAuth
 	cache     Cache
+	client    *slack.Client
 	log       *log.Logger
 	tz        *time.Location
 }
@@ -140,7 +137,8 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	}
 	cachePath := path.Join(dataHome, "gh-slack")
 
-	auth, err := getSlackAuth(team)
+	client := slack.NewClient(team)
+	err := client.WithCookieAuth()
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +146,7 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 	c := &SlackClient{
 		cachePath: cachePath,
 		team:      team,
-		auth:      auth,
+		client:    client,
 		log:       log,
 		tz:        time.Now().Location(),
 	}
@@ -158,17 +156,18 @@ func New(team string, log *log.Logger) (*SlackClient, error) {
 
 // Null produces a SlackClient suitable for testing that does not try to load
 // the Slack token or cookies from disk, and starts with an empty cache.
-func Null(team string) (*SlackClient, error) {
+func Null(team string, roundTripper http.RoundTripper) (*SlackClient, error) {
 	cacheFile, err := os.CreateTemp("", "gh-slack-cache")
 	if err != nil {
 		return nil, err
 	}
 
+	client := slack.NewClient("test-team")
+	client.WithHTTPClient(&http.Client{Transport: roundTripper})
+
 	return &SlackClient{
-		team: team,
-		auth: &SlackAuth{
-			Token: "null",
-		},
+		team:      team,
+		client:    client,
 		cachePath: cacheFile.Name(),
 		tz:        time.UTC,
 	}, nil
@@ -184,79 +183,21 @@ func (c *SlackClient) UsernameForMessage(message Message) (string, error) {
 	return "ghost", nil
 }
 
-func (c *SlackClient) API(verb, path string, params map[string]string, body string) ([]byte, error) {
-	u, err := url.Parse(fmt.Sprintf("https://%s.slack.com/api/", c.team))
-	if err != nil {
-		return nil, err
-	}
-	u.Path += path
-	q := u.Query()
-	for p := range params {
-		q.Add(p, params[p])
-	}
-	u.RawQuery = q.Encode()
-
-	messageBytes := []byte(body)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal message: %w", err)
-	}
-
-	reqBody := bytes.NewReader(messageBytes)
-
-	resBody := []byte{}
-
-	for {
-		req, err := http.NewRequest(verb, u.String(), reqBody)
-		if err != nil {
-			return nil, err
-		}
-		// FIXME: this doesn't seem to break non-POST/non-data requests, but migth
-		// be polluting the headers.
-		req.Header.Set("Content-Type", "application/json; charset=utf-8")
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.auth.Token))
-		for key := range c.auth.Cookies {
-			req.AddCookie(&http.Cookie{Name: key, Value: c.auth.Cookies[key]})
-		}
-
-		resp, err := httpclient.Client.Do(req)
-		if err != nil {
-			return nil, err
-		}
-
-		resBody, err = io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		if resp.StatusCode == 429 {
-			s, err := strconv.Atoi(resp.Header["Retry-After"][0])
-			if err != nil {
-				return nil, err
-			}
-			d := time.Duration(s)
-			c.log.Printf("rate limited, waiting %ds", d)
-			time.Sleep(d * time.Second)
-		} else if resp.StatusCode >= 300 {
-			return nil, fmt.Errorf("status code %d, headers: %q, body: %q", resp.StatusCode, resp.Header, body)
-		} else {
-			break
-		}
-	}
-
-	return resBody, nil
+func (c *SlackClient) API(verb, path string, params map[string]string, body []byte) ([]byte, error) {
+	return c.client.API(context.TODO(), verb, path, params, body)
 }
 
 func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
-	return c.API("GET", path, params, "{}")
+	return c.API("GET", path, params, []byte("{}"))
 }
 
 func (c *SlackClient) post(path string, params map[string]string, msg *SendMessage) ([]byte, error) {
 	messageBytes, err := json.Marshal(msg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal message: %w", err)
+		return nil, fmt.Errorf("failed to marshal message: %w", err)
 	}
 
-	return c.API("POST", path, params, string(messageBytes))
+	return c.API("POST", path, params, messageBytes)
 }
 
 func (c *SlackClient) ChannelInfo(id string) (*Channel, error) {

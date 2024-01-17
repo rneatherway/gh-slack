@@ -5,15 +5,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rneatherway/gh-slack/internal/httpclient"
 	"github.com/rneatherway/gh-slack/internal/mocks"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
 )
 
 func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
-	httpclient.Client = &mocks.MockClient{}
-	mocks.MockSuccessfulAuthResponse()
-	client, err := slackclient.Null("test")
+	mockClient := &mocks.MockClient{}
+	mockClient.MockSuccessfulAuthResponse()
+	client, err := slackclient.Null("test", mockClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -22,7 +21,7 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 		{Text: "second message", User: "82317", BotID: "", Ts: "124.567"},
 	}
 	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
-	mocks.MockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
+	mockClient.MockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
 	actual, err := FromMessages(client, history)
 	if err != nil {
 		t.Fatal(err)
@@ -38,9 +37,9 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameUser(t *testing.T) {
 }
 
 func TestFromMessagesCombinesAdjacentMessagesFromSameBot(t *testing.T) {
-	httpclient.Client = &mocks.MockClient{}
-	mocks.MockSuccessfulAuthResponse()
-	client, err := slackclient.Null("test")
+	mockClient := &mocks.MockClient{}
+	mockClient.MockSuccessfulAuthResponse()
+	client, err := slackclient.Null("test", mockClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,9 +63,9 @@ func TestFromMessagesCombinesAdjacentMessagesFromSameBot(t *testing.T) {
 }
 
 func TestFromMessagesSeparatesMessagesFromSameUserWhenFarApartInTime(t *testing.T) {
-	httpclient.Client = &mocks.MockClient{}
-	mocks.MockSuccessfulAuthResponse()
-	client, err := slackclient.Null("test")
+	mockClient := &mocks.MockClient{}
+	mockClient.MockSuccessfulAuthResponse()
+	client, err := slackclient.Null("test", mockClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +74,7 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenFarApartInTime(t *testing.
 		{Text: "second message", User: "82317", BotID: "", Ts: "1679064168.0"},
 	}
 	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
-	mocks.MockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
+	mockClient.MockSuccessfulUsersResponse([]slackclient.User{{ID: "82317", Name: "cheshire137"}})
 	actual, err := FromMessages(client, history)
 	if err != nil {
 		t.Fatal(err)
@@ -93,9 +92,9 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenFarApartInTime(t *testing.
 }
 
 func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) {
-	httpclient.Client = &mocks.MockClient{}
-	mocks.MockSuccessfulAuthResponse()
-	client, err := slackclient.Null("test")
+	mockClient := &mocks.MockClient{}
+	mockClient.MockSuccessfulAuthResponse()
+	client, err := slackclient.Null("test", mockClient)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,7 +104,7 @@ func TestFromMessagesSeparatesMessagesFromSameUserWhenNotAdjacent(t *testing.T) 
 		{Text: "third message", User: "82317", BotID: "", Ts: "125.678"},
 	}
 	history := &slackclient.HistoryResponse{Ok: true, HasMore: false, Messages: messages}
-	mocks.MockSuccessfulUsersResponse([]slackclient.User{
+	mockClient.MockSuccessfulUsersResponse([]slackclient.User{
 		{ID: "82317", Name: "cheshire137"},
 		{ID: "1234", Name: "octokatherine"},
 	})
