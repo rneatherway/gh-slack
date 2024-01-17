@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	slack "github.com/rneatherway/slackclient"
+	"github.com/rneatherway/slack"
 
 	"nhooyr.io/websocket"
 )
