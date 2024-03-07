@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/rneatherway/gh-slack/internal/gh"
 	"github.com/rneatherway/gh-slack/internal/markdown"
@@ -28,29 +29,41 @@ var readCmd = &cobra.Command{
 }
 
 var (
-	permalinkRE = regexp.MustCompile("https://([^./]+).slack.com/archives/([A-Z0-9]+)/p([0-9]+)([0-9]{6})")
-	nwoRE       = regexp.MustCompile("^/[^/]+/[^/]+/?$")
-	issueRE     = regexp.MustCompile("^/[^/]+/[^/]+/(issues|pull)/[0-9]+/?$")
+	nwoRE   = regexp.MustCompile("^/[^/]+/[^/]+/?$")
+	issueRE = regexp.MustCompile("^/[^/]+/[^/]+/(issues|pull)/[0-9]+/?$")
 )
 
 type linkParts struct {
 	team      string
 	channelID string
 	timestamp string
+	thread    string
 }
 
-// https://github.slack.com/archives/CP9GMKJCE/p1648028606962719
-// returns (github, CP9GMKJCE, 1648028606.962719, nil)
 func parsePermalink(link string) (linkParts, error) {
-	result := permalinkRE.FindStringSubmatch(link)
-	if result == nil {
-		return linkParts{}, fmt.Errorf("not a permalink: %q", link)
+	u, err := url.Parse(link)
+	if err != nil {
+		return linkParts{}, err
 	}
 
+	team, ok := strings.CutSuffix(u.Hostname(), ".slack.com")
+	if !ok {
+		return linkParts{}, fmt.Errorf("expected slack.com subdomain: %q", link)
+	}
+
+	pathSegments := strings.Split(strings.TrimPrefix(u.Path, "/"), "/")
+	if len(pathSegments) != 3 || pathSegments[0] != "archives" {
+		return linkParts{}, fmt.Errorf("expected path of the form /archives/<channel>/p<timestamp>: %q", link)
+	}
+
+	channel := pathSegments[1]
+	timestamp := pathSegments[2][1:len(pathSegments[2])-6] + "." + pathSegments[2][len(pathSegments[2])-6:]
+
 	return linkParts{
-		team:      result[1],
-		channelID: result[2],
-		timestamp: result[3] + "." + result[4],
+		team:      team,
+		channelID: channel,
+		timestamp: timestamp,
+		thread:    u.Query().Get("thread_ts"),
 	}, nil
 }
 
@@ -123,7 +136,7 @@ func readSlack(args []string) error {
 		return err
 	}
 
-	history, err := client.History(linkParts.channelID, linkParts.timestamp, opts.Limit)
+	history, err := client.History(linkParts.channelID, linkParts.timestamp, linkParts.thread, opts.Limit)
 	if err != nil {
 		return err
 	}

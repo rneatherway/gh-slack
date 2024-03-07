@@ -38,6 +38,7 @@ type Message struct {
 	Attachments []Attachment
 	Ts          string
 	Type        string
+	ReplyCount  int `json:"reply_count"`
 }
 
 type SendMessage struct {
@@ -291,12 +292,20 @@ func (c *SlackClient) loadCache() error {
 	return json.Unmarshal(content, &c.cache)
 }
 
-func (c *SlackClient) History(channelID string, startTimestamp string, limit int) (*HistoryResponse, error) {
-	body, err := c.get("conversations.replies",
-		map[string]string{
-			"channel":   channelID,
-			"ts":        startTimestamp,
-			"inclusive": "true"})
+func (c *SlackClient) History(channelID string, startTimestamp string, thread string, limit int) (*HistoryResponse, error) {
+	params := map[string]string{
+		"channel":   channelID,
+		"ts":        startTimestamp,
+		"inclusive": "true",
+		"limit":     strconv.Itoa(limit),
+	}
+
+	if thread != "" {
+		params["ts"] = thread
+		params["oldest"] = startTimestamp
+	}
+
+	body, err := c.get("conversations.replies", params)
 	if err != nil {
 		return nil, err
 	}
@@ -311,8 +320,15 @@ func (c *SlackClient) History(channelID string, startTimestamp string, limit int
 		return nil, fmt.Errorf("conversations.replies response not OK: %s", body)
 	}
 
-	if len(historyResponse.Messages) > 1 {
-		// This was a thread, so we can return immediately
+	// If thread was specified, then we are fetching only part of a thread and
+	// should remove the first message if it has a reply count as we don't want
+	// the root message.
+	if thread != "" && historyResponse.Messages[0].ReplyCount != 0 && len(historyResponse.Messages) > 1 {
+		historyResponse.Messages = historyResponse.Messages[1:]
+	}
+
+	if thread != "" || historyResponse.Messages[0].ReplyCount != 0 {
+		// Either we are deliberately fetching a subthread, or an entire thread.
 		return historyResponse, nil
 	}
 
