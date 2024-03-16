@@ -104,6 +104,7 @@ type User struct {
 }
 
 type UsersResponse struct {
+	CursorResponseMetadata
 	Ok      bool
 	Members []User
 }
@@ -262,20 +263,32 @@ func (c *SlackClient) conversations() ([]Channel, error) {
 	return channels, nil
 }
 
-func (c *SlackClient) users(params map[string]string) (*UsersResponse, error) {
-	body, err := c.get("users.list", nil)
-	if err != nil {
-		return nil, err
-	}
+func (c *SlackClient) users() ([]User, error) {
+	users := make([]User, 0, 100)
+	resp := &UsersResponse{}
+	for {
+		body, err := c.get("users.list", map[string]string{
+			"cursor": resp.ResponseMetadata.NextCursor,
+			"limit":  "1000",
+		})
+		if err != nil {
+			return nil, err
+		}
 
-	users := &UsersResponse{}
-	err = json.Unmarshal(body, users)
-	if err != nil {
-		return nil, err
-	}
+		err = json.Unmarshal(body, resp)
+		if err != nil {
+			return nil, err
+		}
 
-	if !users.Ok {
-		return nil, fmt.Errorf("users response not OK: %s", body)
+		if !resp.Ok {
+			return nil, fmt.Errorf("users response not OK: %s", body)
+		}
+
+		users = append(users, resp.Members...)
+
+		if resp.ResponseMetadata.NextCursor == "" {
+			break
+		}
 	}
 
 	return users, nil
@@ -380,13 +393,13 @@ func (c *SlackClient) UsernameForID(id string) (string, error) {
 		return name, nil
 	}
 
-	ur, err := c.users(nil)
+	ur, err := c.users()
 	if err != nil {
 		return "", err
 	}
 
 	c.cache.Users = make(map[string]string)
-	for _, ch := range ur.Members {
+	for _, ch := range ur {
 		c.cache.Users[ch.ID] = ch.Name
 	}
 
