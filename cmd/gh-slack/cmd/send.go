@@ -8,21 +8,7 @@ import (
 	"github.com/cli/go-gh/pkg/config"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
-
-func getFlagOrElseConfig(cfg *config.Config, flags *pflag.FlagSet, key string) (string, error) {
-	value, err := flags.GetString(key)
-	if err != nil {
-		return "", err
-	}
-
-	if value != "" {
-		return value, nil
-
-	}
-	return cfg.Get([]string{"extensions", "slack", key})
-}
 
 var sendCmd = &cobra.Command{
 	Use:   "send [flags]",
@@ -74,7 +60,7 @@ var sendCmd = &cobra.Command{
 	},
 	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> -b <bot-name>
   gh-slack send -m <message> -w # If bot is specified in config
-` + sendConfigExample,
+` + configExample,
 }
 
 // sendMessage sends a message to a Slack channel.

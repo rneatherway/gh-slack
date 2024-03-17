@@ -3,10 +3,25 @@ package cmd
 import (
 	"os"
 
+	"github.com/cli/go-gh/pkg/config"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-const sendConfigExample = `
+func getFlagOrElseConfig(cfg *config.Config, flags *pflag.FlagSet, key string) (string, error) {
+	value, err := flags.GetString(key)
+	if err != nil {
+		return "", err
+	}
+
+	if value != "" {
+		return value, nil
+
+	}
+	return cfg.Get([]string{"extensions", "slack", key})
+}
+
+const configExample = `
   # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
   extensions:
     slack:
@@ -25,7 +40,7 @@ var rootCmd = &cobra.Command{
   gh-slack read -i <issue-url> <slack-permalink>
   gh-slack send -m <message> -c <channel-name> -t <team-name>
   gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}
-  ` + sendConfigExample,
+  ` + configExample,
 }
 
 func Execute() error {
@@ -43,6 +58,7 @@ func init() {
 	rootCmd.AddCommand(readCmd)
 	rootCmd.AddCommand(sendCmd)
 	rootCmd.AddCommand(apiCmd)
+	rootCmd.AddCommand(authCmd)
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show verbose debug information")
 	rootCmd.SetHelpTemplate(rootCmdUsageTemplate)
 	rootCmd.SetUsageTemplate(rootCmdUsageTemplate)
