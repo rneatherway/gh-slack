@@ -60,7 +60,7 @@ var sendCmd = &cobra.Command{
 	},
 	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> -b <bot-name>
   gh-slack send -m <message> -w # If bot is specified in config
-` + configExample,
+` + sendConfigEample,
 }
 
 // sendMessage sends a message to a Slack channel.

@@ -21,7 +21,7 @@ func getFlagOrElseConfig(cfg *config.Config, flags *pflag.FlagSet, key string) (
 	return cfg.Get([]string{"extensions", "slack", key})
 }
 
-const configExample = `
+const sendConfigEample = `
   # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
   extensions:
     slack:
@@ -40,7 +40,8 @@ var rootCmd = &cobra.Command{
   gh-slack read -i <issue-url> <slack-permalink>
   gh-slack send -m <message> -c <channel-name> -t <team-name>
   gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}
-  ` + configExample,
+  eval $(gh-slack auth -t <team-name>)
+  ` + sendConfigEample,
 }
 
 func Execute() error {

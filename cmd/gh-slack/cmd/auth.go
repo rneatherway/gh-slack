@@ -11,8 +11,8 @@ import (
 
 var authCmd = &cobra.Command{
 	Use:   "auth [flags]",
-	Short: "Prints authentication information for the Slack API",
-	Long:  `Prints authentication information for the Slack API.`,
+	Short: "Prints authentication information for the Slack API (treat output as secret)",
+	Long:  "Prints authentication information for the Slack API (treat output as secret).",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := config.Read()
 		if err != nil {
@@ -38,33 +38,42 @@ var authCmd = &cobra.Command{
 		fmt.Printf("export SLACK_COOKIES=%s\n", vals.Encode())
 		return nil
 	},
-	Example: `  gh-slack auth [-t <team-name>]
-	` + configExample,
+	Example: `  eval $(gh-slack auth [-t <team-name>])
+
+  # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
+  extensions:
+    slack:
+      team: foo`,
 }
 
 func init() {
 	authCmd.Flags().StringP("team", "t", "", "Slack team name (required here or in config)")
-	authCmd.SetUsageTemplate(authCmdUsage)
-	authCmd.SetHelpTemplate(authCmdUsage)
+	authCmd.SetHelpTemplate(authCmdUsageTemplate)
+	authCmd.SetUsageTemplate(authCmdUsageTemplate)
 }
 
-const authCmdUsage string = `Usage:{{if .Runnable}}
-  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
-  {{.CommandPath}}{{end}}{{if gt (len .Aliases) 0}}
+const authCmdUsageTemplate string = `Usage:{{if .Runnable}}
+{{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+{{.CommandPath}}{{end}}{{if gt (len .Aliases) 0}}
 Aliases:
-  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+{{.NameAndAliases}}{{end}}{{if .HasExample}}
+
+Security:
+  Treat the output of this command as secret and do not share it with anyone!
+  It can be used to impersonate you. If you suspect it has been compromised,
+  log out of the Slack app to revoke the token and cookies.
 
 Examples:
 {{.Example}}{{end}}{{if .HasAvailableSubCommands}}{{$cmds := .Commands}}{{if eq (len .Groups) 0}}
 
-Available Commands:{{range $cmds}}{{if (or .IsAvailableCommand (eq .Name "help"))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{else}}{{range $group := .Groups}}
+Available Commands:{{range $cmds}}{{if (or .IsAvailableCommand)}}
+{{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{else}}{{range $group := .Groups}}
 
 {{.Title}}{{range $cmds}}{{if (and (eq .GroupID $group.ID) (or .IsAvailableCommand (eq .Name "help")))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if not .AllChildCommandsHaveGroup}}
+{{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if not .AllChildCommandsHaveGroup}}
 
 Additional Commands:{{range $cmds}}{{if (and (eq .GroupID "") (or .IsAvailableCommand (eq .Name "help")))}}
-  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+{{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
 
 Flags:
 {{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
@@ -73,7 +82,7 @@ Global Flags:
 {{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
 
 Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
-  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+{{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
 
 Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
 `
