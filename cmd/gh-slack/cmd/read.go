@@ -25,7 +25,7 @@ var readCmd = &cobra.Command{
 		return readSlack(args)
 	},
 	Example: `  gh-slack read <slack-permalink>
-  gh-slack read -i <issue-url> <slack-permalink>`,
+  gh-slack read --details --issue <issue-url> <slack-permalink>`,
 }
 
 var (

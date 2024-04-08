@@ -14,36 +14,42 @@ This project provides a means of archiving a Slack conversation or thread as mar
 
 ## Usage
 
-    Usage:
-      gh slack [command]
+```
+Usage:
+  gh-slack [command]
 
-      If no command is specified, the default is "read". The default command also requires a permalink argument <START> for the first message to fetch.
-      Use "gh slack read --help" for more information about the default command behaviour.
+  If no command is specified, the default is "read". The default command also requires a permalink argument <START> for the first message to fetch.
+  Use "gh-slack read --help" for more information about the default command behaviour.
 
-    Examples:
-      gh slack -i <issue-url> <slack-permalink>  # defaults to read command
-      gh slack read <slack-permalink>
-      gh slack read -i <issue-url> <slack-permalink>
-      gh slack send -m <message> -c <channel-name> -t <team-name>
+Examples:
+  gh-slack --details --issue <issue-url> <slack-permalink>  # defaults to read command
+  gh-slack read <slack-permalink>
+  gh-slack read -i <issue-url> <slack-permalink>
+  gh-slack send -m <message> -c <channel-name> -t <team-name>
+  gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}
+  eval $(gh-slack auth -t <team-name>)
+  
+  # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
+  extensions:
+    slack:
+      team: foo
+      channel: ops
+      bot: robot        # Can be a user id (most reliable), bot profile name or username
 
-      # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
-      extensions:
-        slack:
-          team: github
-          channel: ops
-          bot: hubot        # Can be a user id (most reliable), bot profile name or username
+Available Commands:
+  api         Send an API call to slack
+  auth        Prints authentication information for the Slack API (treat output as secret)
+  completion  Generate the autocompletion script for the specified shell
+  help        Help about any command
+  read        Reads a Slack channel and outputs the messages as markdown
+  send        Sends a message to a Slack channel
 
-    Available Commands:
-      completion  Generate the autocompletion script for the specified shell
-      help        Help about any command
-      read        Reads a Slack channel and outputs the messages as markdown
-      send        Sends a message to a Slack channel
+Flags:
+  -h, --help      help for gh-slack
+  -v, --verbose   Show verbose debug information
 
-    Flags:
-      -h, --help      help for gh-slack
-      -v, --verbose   Show verbose debug information
-
-    Use "gh slack [command] --help" for more information about a command.
+Use "gh-slack [command] --help" for more information about a command.
+```
 
 ## Configuration
 
