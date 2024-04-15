@@ -6,7 +6,7 @@ toolchain go1.21.4
 
 require (
 	github.com/cli/go-gh v1.2.1
-	github.com/rneatherway/slack v0.0.0-20240323132214-0af54ceb5c65
+	github.com/rneatherway/slack v0.0.0-20240412070247-8ea7ec9fab1c
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	nhooyr.io/websocket v1.8.7
