@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/cli/go-gh/pkg/config"
@@ -18,7 +19,13 @@ func getFlagOrElseConfig(cfg *config.Config, flags *pflag.FlagSet, key string) (
 		return value, nil
 
 	}
-	return cfg.Get([]string{"extensions", "slack", key})
+
+	s, err := cfg.Get([]string{"extensions", "slack", key})
+	if err != nil {
+		err = fmt.Errorf("failed to read gh-slack configuration: %w", err)
+	}
+
+	return s, err
 }
 
 const sendConfigEample = `
