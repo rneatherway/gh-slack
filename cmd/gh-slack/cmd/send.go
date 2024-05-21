@@ -46,7 +46,7 @@ var sendCmd = &cobra.Command{
 		}
 
 		if wait && bot == "" {
-			bot, err = cfg.Get([]string{"extensions", "slack", "bot"})
+			bot, err = getGHSlackConfigValue(cfg, "bot")
 			if err != nil {
 				return err
 			}

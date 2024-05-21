@@ -3,6 +3,8 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/cli/go-gh/pkg/config"
 	"github.com/spf13/cobra"
@@ -20,12 +22,21 @@ func getFlagOrElseConfig(cfg *config.Config, flags *pflag.FlagSet, key string) (
 
 	}
 
-	s, err := cfg.Get([]string{"extensions", "slack", key})
+	return getGHSlackConfigValue(cfg, key)
+}
+
+func getGHSlackConfigValue(cfg *config.Config, key string) (string, error) {
+	fullKey := []string{"extensions", "slack", key}
+	s, err := cfg.Get(fullKey)
 	if err != nil {
-		err = fmt.Errorf("failed to read gh-slack configuration: %w", err)
+		return "", fmt.Errorf(
+			"failed to read gh-slack configuration value %q from %q: %w",
+			strings.Join(fullKey, "."),
+			filepath.Join(config.ConfigDir(), "config.yml"),
+			err)
 	}
 
-	return s, err
+	return s, nil
 }
 
 const sendConfigEample = `
