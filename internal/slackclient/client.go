@@ -318,7 +318,7 @@ func (c *SlackClient) History(channelID string, startTimestamp string, thread st
 		params["oldest"] = startTimestamp
 	}
 
-	body, err := c.get("conversations.replies", params)
+	body, err := c.API("POST", "conversations.replies", params, nil)
 	if err != nil {
 		return nil, err
 	}
