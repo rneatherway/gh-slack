@@ -1,4 +1,4 @@
-# gh-slack
+# gh slack
 
 [![CI](https://github.com/rneatherway/gh-slack/actions/workflows/ci.yml/badge.svg)](https://github.com/rneatherway/gh-slack/actions/workflows/ci.yml) [![Release](https://github.com/rneatherway/gh-slack/actions/workflows/release.yml/badge.svg)](https://github.com/rneatherway/gh-slack/actions/workflows/release.yml)
 
@@ -16,18 +16,18 @@ This project provides a means of archiving a Slack conversation or thread as mar
 
 ```
 Usage:
-  gh-slack [command]
+  gh slack [command]
 
   If no command is specified, the default is "read". The default command also requires a permalink argument <START> for the first message to fetch.
-  Use "gh-slack read --help" for more information about the default command behaviour.
+  Use "gh slack read --help" for more information about the default command behaviour.
 
 Examples:
-  gh-slack --details --issue <issue-url> <slack-permalink>  # defaults to read command
-  gh-slack read <slack-permalink>
-  gh-slack read -i <issue-url> <slack-permalink>
-  gh-slack send -m <message> -c <channel-name> -t <team-name>
-  gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}
-  eval $(gh-slack auth -t <team-name>)
+  gh slack --details --issue <issue-url> <slack-permalink>  # defaults to read command
+  gh slack read <slack-permalink>
+  gh slack read -i <issue-url> <slack-permalink>
+  gh slack send -m <message> -c <channel-name> -t <team-name>
+  gh slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}
+  eval $(gh slack auth -t <team-name>)
   
   # Example configuration (add to gh's configuration file at $HOME/.config/gh/config.yml):
   extensions:
@@ -45,10 +45,10 @@ Available Commands:
   send        Sends a message to a Slack channel
 
 Flags:
-  -h, --help      help for gh-slack
+  -h, --help      help for gh slack
   -v, --verbose   Show verbose debug information
 
-Use "gh-slack [command] --help" for more information about a command.
+Use "gh slack [command] --help" for more information about a command.
 ```
 
 ## Configuration
@@ -66,6 +66,26 @@ extensions:
 
 This is particularly useful if you want to use the `send` subcommand to interact
 with a bot serving chatops in a standard operations channel.
+
+## Examples
+
+### Sending a message
+
+```sh
+gh slack send --team yourslackinstanceName -c 'deploy-ops' -m "$argv"
+```
+
+### Creating gists
+
+```sh
+gh slack | gh gist create
+```
+
+### Testing token outputs
+
+```sh
+gh slack auth -t
+```
 
 ## Limitations
 
