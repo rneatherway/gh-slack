@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/cli/go-gh/pkg/config"
+	"github.com/cli/go-gh/v2/pkg/config"
 	"github.com/rneatherway/slack"
 	"github.com/spf13/cobra"
 )
@@ -14,7 +14,7 @@ var authCmd = &cobra.Command{
 	Short: "Prints authentication information for the Slack API (treat output as secret)",
 	Long:  "Prints authentication information for the Slack API (treat output as secret).",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Read()
+		cfg, err := config.Read(nil)
 		if err != nil {
 			return err
 		}

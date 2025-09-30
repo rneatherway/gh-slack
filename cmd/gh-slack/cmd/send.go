@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 
-	"github.com/cli/go-gh/pkg/config"
+	"github.com/cli/go-gh/v2/pkg/config"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +15,7 @@ var sendCmd = &cobra.Command{
 	Short: "Sends a message to a Slack channel",
 	Long:  `Sends a message to a Slack channel.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Read()
+		cfg, err := config.Read(nil)
 		if err != nil {
 			return err
 		}
