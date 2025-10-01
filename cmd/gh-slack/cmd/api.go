@@ -6,7 +6,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/cli/go-gh/pkg/config"
+	"github.com/cli/go-gh/v2/pkg/config"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
 	"github.com/spf13/cobra"
 )
@@ -16,7 +16,7 @@ var apiCmd = &cobra.Command{
 	Short: "Send an API call to slack",
 	Long:  "Send an API call to slack",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Read()
+		cfg, err := config.Read(nil)
 		if err != nil {
 			return err
 		}

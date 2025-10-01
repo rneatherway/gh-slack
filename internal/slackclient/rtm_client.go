@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/cli/go-gh/pkg/markdown"
+	"github.com/cli/go-gh/v2/pkg/markdown"
 	"nhooyr.io/websocket"
 	"nhooyr.io/websocket/wsjson"
 )
