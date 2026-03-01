@@ -78,8 +78,8 @@ func trimAndPrint(text string) {
 }
 
 // ListenForMessagesFromBot listens for the first message from the bot in a given channel and prints its contents
-func (c *RTMClient) ListenForMessagesFromBot(channelID, botName string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+func (c *RTMClient) ListenForMessagesFromBot(channelID, botName string, timeout time.Duration) error {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	for {

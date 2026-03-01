@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"time"
 
 	"github.com/cli/go-gh/v2/pkg/config"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
@@ -52,11 +53,16 @@ var sendCmd = &cobra.Command{
 			}
 		}
 
+		timeout, err := cmd.Flags().GetDuration("timeout")
+		if err != nil {
+			return err
+		}
+
 		logger := log.New(io.Discard, "", log.LstdFlags)
 		if verbose {
 			logger = log.Default()
 		}
-		return sendMessage(team, channelName, message, bot, logger)
+		return sendMessage(team, channelName, message, bot, timeout, logger)
 	},
 	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> -b <bot-name>
   gh-slack send -m <message> -w # If bot is specified in config
@@ -64,7 +70,7 @@ var sendCmd = &cobra.Command{
 }
 
 // sendMessage sends a message to a Slack channel.
-func sendMessage(team, channelName, message, bot string, logger *log.Logger) error {
+func sendMessage(team, channelName, message, bot string, timeout time.Duration, logger *log.Logger) error {
 	client, err := slackclient.New(team, logger)
 	if err != nil {
 		return err
@@ -92,7 +98,7 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 	}
 
 	if bot != "" {
-		err = rtmClient.ListenForMessagesFromBot(channelID, bot)
+		err = rtmClient.ListenForMessagesFromBot(channelID, bot, timeout)
 		if err != nil {
 			return fmt.Errorf("failed to listen to messages: %w", err)
 		}
@@ -108,6 +114,7 @@ func init() {
 	sendCmd.MarkFlagRequired("message")
 	sendCmd.Flags().StringP("bot", "b", "", "User id (most reliable), profile name or username to wait for a response from (implies --wait)")
 	sendCmd.Flags().BoolP("wait", "w", false, "Wait for message responses")
+	sendCmd.Flags().Duration("timeout", 60*time.Second, "Timeout for waiting for bot response (e.g., 30s, 2m)")
 	sendCmd.MarkFlagsRequiredTogether("message")
 	sendCmd.SetUsageTemplate(sendCmdUsage)
 	sendCmd.SetHelpTemplate(sendCmdUsage)
