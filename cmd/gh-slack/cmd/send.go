@@ -84,12 +84,11 @@ func sendMessage(team, channelName, message, bot string, logger *log.Logger) err
 		return err
 	}
 
-	// We get back the permalink to the message we just sent, but I don't
-	// currently see a use for that.
-	_, err = client.SendMessage(channelID, message)
+	resp, err := client.SendMessage(channelID, message)
 	if err != nil {
 		return err
 	}
+	fmt.Println(resp.Output(team, channelID))
 
 	if bot != "" {
 		err = rtmClient.ListenForMessagesFromBot(channelID, bot)
