@@ -310,7 +310,6 @@ func (c *SlackClient) History(channelID string, startTimestamp string, thread st
 		"channel":   channelID,
 		"ts":        startTimestamp,
 		"inclusive": "true",
-		"limit":     strconv.Itoa(limit),
 	}
 
 	if thread != "" {
