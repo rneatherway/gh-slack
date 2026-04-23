@@ -13,7 +13,6 @@ import (
 	"github.com/rneatherway/gh-slack/internal/gh"
 	"github.com/rneatherway/gh-slack/internal/markdown"
 	"github.com/rneatherway/gh-slack/internal/slackclient"
-	"github.com/rneatherway/gh-slack/internal/version"
 	"github.com/spf13/cobra"
 )
 
@@ -72,14 +71,12 @@ var opts struct {
 		Start string
 	}
 	Limit   int
-	Version bool
 	Details bool
 	Issue   string
 }
 
 func init() {
 	readCmd.Flags().IntVarP(&opts.Limit, "limit", "l", 20, "Number of _channel_ messages to be fetched after the starting message (all thread messages are fetched)")
-	readCmd.Flags().BoolVar(&opts.Version, "version", false, "Output version information")
 	readCmd.Flags().BoolVarP(&opts.Details, "details", "d", false, "Wrap the markdown output in HTML <details> tags")
 	readCmd.Flags().StringVarP(&opts.Issue, "issue", "i", "", "The URL of a repository to post the output as a new issue, or the URL of an issue (or pull request) to add a comment to")
 	readCmd.SetHelpTemplate(readCmdUsage)
@@ -87,11 +84,6 @@ func init() {
 }
 
 func readSlack(args []string) error {
-	if opts.Version {
-		fmt.Printf("gh-slack %s (%s)\n", version.Version(), version.Commit())
-		return nil
-	}
-
 	if len(args) == 0 {
 		return errors.New("the required argument <START> was not provided")
 	}

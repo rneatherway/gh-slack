@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/config"
+	"github.com/rneatherway/gh-slack/internal/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -79,6 +80,8 @@ func init() {
 	rootCmd.AddCommand(apiCmd)
 	rootCmd.AddCommand(authCmd)
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Show verbose debug information")
+	rootCmd.Version = fmt.Sprintf("%s (%s)", version.Version(), version.Commit())
+	rootCmd.SetVersionTemplate("gh-slack {{.Version}}\n")
 	rootCmd.SetHelpTemplate(rootCmdUsageTemplate)
 	rootCmd.SetUsageTemplate(rootCmdUsageTemplate)
 }
