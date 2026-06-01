@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/cli/go-gh/v2/pkg/config"
@@ -31,6 +33,17 @@ var apiCmd = &cobra.Command{
 			return err
 		}
 
+		fileFlags, err := cmd.Flags().GetStringArray("file")
+		if err != nil {
+			return err
+		}
+		if len(fileFlags) > 1 {
+			return fmt.Errorf("only one file upload is supported")
+		}
+		if len(fileFlags) > 0 && body != "" {
+			return fmt.Errorf("--file cannot be used with --body")
+		}
+
 		mappedFields, err := mapFields(fields)
 		if err != nil {
 			return err
@@ -52,7 +65,7 @@ var apiCmd = &cobra.Command{
 			path = args[1]
 		} else if len(args) == 1 {
 			path = args[0]
-			if body == "" {
+			if body == "" && len(fileFlags) == 0 {
 				verb = "GET"
 			} else {
 				verb = "POST"
@@ -61,7 +74,22 @@ var apiCmd = &cobra.Command{
 			return fmt.Errorf("expected 1 or 2 arguments: verb and/or path, see help")
 		}
 
-		response, err := client.API(verb, path, mappedFields, []byte(body))
+		var response []byte
+		if len(fileFlags) > 0 {
+			if verb != "POST" {
+				return fmt.Errorf("--file only supports POST requests")
+			}
+
+			fileParam, file, err := fileParamFromFlag(fileFlags[0])
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			response, err = client.APIMultipart(path, mappedFields, fileParam)
+		} else {
+			response, err = client.API(verb, path, mappedFields, []byte(body))
+		}
 		if err != nil {
 			return err
 		}
@@ -70,15 +98,18 @@ var apiCmd = &cobra.Command{
 		return nil
 	},
 	Example: `  gh-slack api get conversations.list -f types=public_channel,private_channel
-  gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}`,
+  gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}'
+  gh-slack api post users.setPhoto -F image=@photo.jpg -f crop_x=0 -f crop_y=0`,
 }
 
 var fields []string
 var body string
+var files []string
 
 func init() {
 	apiCmd.Flags().StringArrayVarP(&fields, "field", "f", nil, "Fields to pass to the api call")
 	apiCmd.Flags().StringVarP(&body, "body", "b", "", "Body to send as JSON")
+	apiCmd.Flags().StringArrayVarP(&files, "file", "F", nil, "File to upload as multipart form data, in key=@path format")
 	apiCmd.Flags().StringP("team", "t", "", "Slack team name (required here or in config)")
 	apiCmd.SetHelpTemplate(apiCmdUsage)
 	apiCmd.SetUsageTemplate(apiCmdUsage)
@@ -98,6 +129,29 @@ func mapFields(fields []string) (map[string]string, error) {
 	}
 
 	return mappedFields, nil
+}
+
+func fileParamFromFlag(fileFlag string) (slackclient.FileParam, *os.File, error) {
+	parts := strings.SplitN(fileFlag, "=", 2)
+
+	if len(parts) != 2 || parts[0] == "" {
+		return slackclient.FileParam{}, nil, fmt.Errorf("file '%s' must be in key=@path format", fileFlag)
+	}
+	if !strings.HasPrefix(parts[1], "@") || parts[1] == "@" {
+		return slackclient.FileParam{}, nil, fmt.Errorf("file '%s' must be in key=@path format", fileFlag)
+	}
+
+	filePath := strings.TrimPrefix(parts[1], "@")
+	file, err := os.Open(filePath)
+	if err != nil {
+		return slackclient.FileParam{}, nil, fmt.Errorf("opening file %q: %w", filePath, err)
+	}
+
+	return slackclient.FileParam{
+		Fieldname: parts[0],
+		Filename:  filepath.Base(filePath),
+		Reader:    file,
+	}, file, nil
 }
 
 const apiCmdUsage string = `Usage:{{if .Runnable}}

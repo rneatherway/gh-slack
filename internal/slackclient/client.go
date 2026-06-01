@@ -189,6 +189,12 @@ func (c *SlackClient) API(verb, path string, params map[string]string, body []by
 	return c.client.API(context.TODO(), verb, path, params, body)
 }
 
+type FileParam = slack.FileParam
+
+func (c *SlackClient) APIMultipart(path string, params map[string]string, file FileParam) ([]byte, error) {
+	return c.client.APIMultipart(context.TODO(), path, params, file)
+}
+
 func (c *SlackClient) get(path string, params map[string]string) ([]byte, error) {
 	return c.API("GET", path, params, []byte("{}"))
 }
