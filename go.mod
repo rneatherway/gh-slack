@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/cli/go-gh/v2 v2.12.2
-	github.com/rneatherway/slack v0.0.0-20260520154001-5e09d7d58326
+	github.com/rneatherway/slack v0.0.0-20260818180516-40e320fd8d54
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/pflag v1.0.5
 	nhooyr.io/websocket v1.8.7
