@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/cli/go-gh/v2/pkg/config"
@@ -21,14 +22,36 @@ var sendCmd = &cobra.Command{
 			return err
 		}
 
-		channelName, err := getFlagOrElseConfig(cfg, cmd.Flags(), "channel")
+		thread, err := cmd.Flags().GetString("thread")
 		if err != nil {
 			return err
 		}
 
-		team, err := getFlagOrElseConfig(cfg, cmd.Flags(), "team")
+		target, fromPermalink, err := targetFromThread(thread)
 		if err != nil {
 			return err
+		}
+		if fromPermalink {
+			authTeam, flagErr := cmd.Flags().GetString("team")
+			if flagErr != nil {
+				return flagErr
+			}
+			if authTeam == "" {
+				authTeam, _ = getGHSlackConfigValue(cfg, "team")
+			}
+			if authTeam != "" {
+				target.team = authTeam
+			}
+		} else {
+			target.channelName, err = getFlagOrElseConfig(cfg, cmd.Flags(), "channel")
+			if err != nil {
+				return err
+			}
+
+			target.team, err = getFlagOrElseConfig(cfg, cmd.Flags(), "team")
+			if err != nil {
+				return err
+			}
 		}
 
 		message, err := cmd.Flags().GetString("message")
@@ -62,18 +85,46 @@ var sendCmd = &cobra.Command{
 		if verbose {
 			logger = log.Default()
 		}
-		return sendMessage(team, channelName, message, bot, timeout, logger)
+		return sendMessage(target, message, bot, timeout, logger)
 	},
 	Example: `  gh-slack send -t <team-name> -c <channel-name> -m <message> -b <bot-name>
+  gh-slack send -m <message> --thread <slack-permalink>
   gh-slack send -m <message> -w # If bot is specified in config
 ` + sendConfigEample,
 }
 
-// sendMessage sends a message to a Slack channel.
-func sendMessage(team, channelName, message, bot string, timeout time.Duration, logger *log.Logger) error {
-	client, err := slackclient.New(team, logger)
+type messageTarget struct {
+	team        string
+	channelName string
+	channelID   string
+	threadTS    string
+}
+
+func targetFromThread(thread string) (messageTarget, bool, error) {
+	target := messageTarget{threadTS: thread}
+	if !strings.Contains(thread, "://") {
+		return target, false, nil
+	}
+
+	parts, err := parsePermalink(thread)
 	if err != nil {
-		return err
+		return messageTarget{}, true, err
+	}
+
+	target.team = parts.team
+	target.channelID = parts.channelID
+	target.threadTS = parts.thread
+	if target.threadTS == "" {
+		target.threadTS = parts.timestamp
+	}
+	return target, true, nil
+}
+
+// sendMessage sends a message to a Slack channel.
+func sendMessage(target messageTarget, message, bot string, timeout time.Duration, logger *log.Logger) error {
+	client, err := slackclient.New(target.team, logger)
+	if err != nil {
+		return fmt.Errorf("failed to authenticate Slack team %q: %w", target.team, err)
 	}
 
 	var rtmClient *slackclient.RTMClient
@@ -85,16 +136,19 @@ func sendMessage(team, channelName, message, bot string, timeout time.Duration, 
 		defer rtmClient.Close()
 	}
 
-	channelID, err := client.ChannelIDForName(channelName)
-	if err != nil {
-		return err
+	channelID := target.channelID
+	if channelID == "" {
+		channelID, err = client.ChannelIDForName(target.channelName)
+		if err != nil {
+			return err
+		}
 	}
 
-	resp, err := client.SendMessage(channelID, message)
+	resp, err := client.SendMessage(channelID, message, target.threadTS)
 	if err != nil {
 		return err
 	}
-	fmt.Println(resp.Output(team, channelID))
+	fmt.Println(resp.Output(target.team, channelID))
 
 	if bot != "" {
 		err = rtmClient.ListenForMessagesFromBot(channelID, bot, timeout)
@@ -110,6 +164,7 @@ func init() {
 	sendCmd.Flags().StringP("channel", "c", "", "Channel name to send the message to (required here or in config)")
 	sendCmd.Flags().StringP("message", "m", "", "Message to send (required here or in config)")
 	sendCmd.Flags().StringP("team", "t", "", "Slack team name (required here or in config)")
+	sendCmd.Flags().String("thread", "", "Thread timestamp or Slack permalink to reply to")
 	sendCmd.MarkFlagRequired("message")
 	sendCmd.Flags().StringP("bot", "b", "", "User id (most reliable), profile name or username to wait for a response from (implies --wait)")
 	sendCmd.Flags().BoolP("wait", "w", false, "Wait for message responses")

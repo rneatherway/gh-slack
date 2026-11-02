@@ -58,6 +58,7 @@ var rootCmd = &cobra.Command{
   gh-slack read <slack-permalink>
   gh-slack read -i <issue-url> <slack-permalink>
   gh-slack send -m <message> -c <channel-name> -t <team-name>
+  gh-slack send -m <message> --thread <slack-permalink>
   gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}
   eval $(gh-slack auth -t <team-name>)
   ` + sendConfigEample,

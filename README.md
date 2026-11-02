@@ -26,6 +26,7 @@ Examples:
   gh-slack read <slack-permalink>
   gh-slack read -i <issue-url> <slack-permalink>
   gh-slack send -m <message> -c <channel-name> -t <team-name>
+  gh-slack send -m <message> --thread <slack-permalink>
   gh-slack api post chat.postMessage -b '{"channel":"123","blocks":[...]}
   eval $(gh-slack auth -t <team-name>)
   
@@ -66,6 +67,12 @@ extensions:
 
 This is particularly useful if you want to use the `send` subcommand to interact
 with a bot serving chatops in a standard operations channel.
+
+Use `--thread <slack-permalink>` to reply in an existing thread. The permalink
+supplies the channel and thread. Its workspace supplies the team unless `--team`
+or the configured team overrides it for authentication. A raw `thread_ts`, such
+as `1712345678.123456`, also works when the team and channel are supplied through
+flags or config.
 
 ## Limitations
 

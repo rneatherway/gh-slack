@@ -476,11 +476,12 @@ func (c *SlackClient) GetLocation() *time.Location {
 	return c.tz
 }
 
-func (c *SlackClient) SendMessage(channelID string, message string) (*SendMessageResponse, error) {
+func (c *SlackClient) SendMessage(channelID, message, thread string) (*SendMessageResponse, error) {
 	body, err := c.post("chat.postMessage",
 		map[string]string{}, &SendMessage{
-			Channel: channelID,
-			Text:    message,
+			Channel:  channelID,
+			Text:     message,
+			ThreadTS: thread,
 		})
 	if err != nil {
 		return nil, err
